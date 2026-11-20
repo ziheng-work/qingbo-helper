@@ -81,7 +81,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
   </ol>
   <h3 style="margin-top:14px"><span class="num">2</span>填名称和地址</h3>
   <p>名称随便填（建议「录单助手」），服务地址粘贴这一串，点确定：</p>
-  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=17</span>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=18</span>
   <p class="tip">插件是跟着你的飞书账号走的。在清博表装一次，社媒帖处理系统里也会有，不用装两遍。之后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
  </div>
  <div class="fig"><span class="cap">图示：入口在这里</span>
@@ -142,8 +142,8 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
  <div>
   <h3><span class="num">②</span>打标：优先级 + 产品型号</h3>
   <ul>
-   <li>清博已经分好级的，插件直接沿用，并提示「优先按这个」。</li>
-   <li>AI 会自动给出优先级、型号和一句简述，觉得对就点「用这个简述」。</li>
+   <li>清博表里已经填了优先级、产品型号、帖子简述的，插件直接沿用，并提示「优先按这个」。</li>
+   <li>清博没填的，AI 会自动给出建议，觉得对就点「用这个简述」。</li>
    <li>要改就自己点优先级按钮；型号点虚线框的建议项，或在输入框里搜。</li>
   </ul>
   <p class="tip">要转 FAE 的单，型号别选「Studio-不确定」这类，选具体系统，否则同步 CRM 会失败。</p>
@@ -261,7 +261,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
 <table>
  <tr><th>事情</th><th>为什么插件做不了</th></tr>
  <tr><td>表单里贴原帖截图</td><td>飞书表单的附件不能用链接预填</td></tr>
- <tr><td>表单里选产品型号</td><td>这个字段不支持预填，插件只能帮你复制好</td></tr>
+ <tr><td>表单里选产品型号</td><td>型号是什么以清博表为准，插件已经帮你带出来；但飞书表单的这个字段不支持用链接预填，只能点「复制型号」后在表单里搜出来选上</td></tr>
  <tr><td>点「提交」</td><td>提交前需要人检查一遍</td></tr>
  <tr><td>流程里「待首回」「待关单」的完成节点</td><td>流程按钮不对插件开放。回复实际发出后再点首回</td></tr>
  <tr><td>企业微信群的「具体群」</td><td>目前没预填，表单里手选</td></tr>

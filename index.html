@@ -94,8 +94,8 @@ POST /tickets/{no}/terminate {reason}
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
-const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
+const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
 const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.17';
+const VER='1.18';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -206,7 +206,10 @@ async function loadRecord(rid){
   try{const p=new URL(v.url).searchParams;for(const[k,n]of Object.entries(K)){const x=p.get('prefill_'+n);if(x)o[k]=x.trim()}o.base=v.url.split('?')[0]}catch(e){}
   const L=LOCAL[rid]||(LOCAL[rid]={pri:'',models:[],ticket:'',acc:'',acts:[],wait:'',extra:'',close:null});
   if(!L.models.length&&!L._sug){L.models=[];L._sug=1}
-  cur={rid,v,o,L,desc:o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
+  const qm=(v.qmodel||'').split(/[,，、;；\n]+/).map(x=>x.trim()).filter(x=>x&&x!=='-').map(x=>MODELS.find(m=>m.toLowerCase()===x.toLowerCase())||x);
+  if(qm.length&&!L.modelTouched)L.models=[...qm];
+  const qd=(v.qdesc||'').trim();
+  cur={rid,v,o,L,qm,desc:(qd&&qd!=='-'&&qd!=='/'?qd:'')||o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
   if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
   if(o.link){LOCAL._links=LOCAL._links||{};LOCAL._links[normLink(o.link)]=rid;L.link=o.link;L.user=o.user||'';saveLocal()}
   render();
@@ -248,7 +251,7 @@ function render(){
    ${(()=>{const all=priOpts(),isMain=p=>/^(无需回复|P[0-3](技术|预期)?)$/.test(p),btn=p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p&&isMain(p)?'sug':''}">${esc(p)}</button>`,ord=['P0','P1','P2','P2技术','P2预期','P3','无需回复'],main=all.filter(isMain).sort((a,b)=>ord.indexOf(a)-ord.indexOf(b)),rest=all.filter(p=>!isMain(p));return `<div class="seg" style="margin-top:6px">${main.map(btn).join('')}</div>`+(rest.length?`<details style="margin-top:6px" ${rest.includes(L.pri)?'open':''}><summary class="hint" style="font-weight:400">更多标签（${rest.length}）</summary><div class="seg" style="margin-top:6px">${rest.map(btn).join('')}</div></details>`:'')})()}
    ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
    ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
-   <h3>产品型号（第一个用于转 FAE）</h3>
+   <h3>产品型号${c.qm&&c.qm.length?' · 清博已标「'+esc(c.qm.join('、'))+'」（优先按这个）':'（第一个用于转 FAE）'}</h3>
    <input id="mS" list="ml" placeholder="搜索型号，回车添加">
    <div class="seg" style="margin-top:6px">${L.models.map((m,i)=>`<button class="on" data-rm="${i}">${i===0?'① ':''}${esc(m)} ✕</button>`).join('')}${sm.map(m=>`<button data-add="${esc(m)}" style="border-style:dashed">+ ${esc(m)}</button>`).join('')}</div>
    <p class="hint">要转 FAE 的单别选「Studio-不确定」这类，选具体系统，否则同步 CRM 会失败。</p>
@@ -261,7 +264,7 @@ function render(){
    <ol class="hint" style="padding-left:18px;margin:8px 0 0;line-height:1.8">
     <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}${fa&&L.facc?'、'+esc(fa[0]):''}已填好${fa&&!L.facc?'（<b>'+esc(fa[0])+'还没选，先点上面</b>）':''}${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
     <li>截图：打开原帖，按 ⌘+Ctrl+Shift+4 框选帖子，回表单点截图框按 ⌘V</li>
-    <li>产品型号：点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
+    <li>产品型号：飞书表单这一项不支持预填，点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
     <li>提交表单，把社媒单号填到下面，再点第 4 步「回写」</li>
    </ol>
    <h3>社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">
@@ -438,8 +441,8 @@ async function writeBack(){
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
-  else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
-  else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
+  else if(t.dataset.add){L.models.push(t.dataset.add);L.modelTouched=1;saveLocal();render()}
+  else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.facc){const a=t.dataset.facc;L.facc=L.facc===a?'':a;if(L.facc&&L.facc!=='其他')L.acc=L.facc;saveLocal();render()}
   else if(t.dataset.acc){L.acc=L.acc===t.dataset.acc?'':t.dataset.acc;saveLocal();render()}
   else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;saveLocal();render()}
@@ -481,7 +484,7 @@ document.addEventListener('paste',e=>{
   const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(!it){toast('剪贴板里没有图片');return}
   e.preventDefault();const fr=new FileReader();fr.onload=()=>{SHOT=fr.result;render();toast('截图已粘贴')};fr.readAsDataURL(it.getAsFile());
 });
-document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&cur){const v=e.target.value.trim();if(v&&!cur.L.models.includes(v)){cur.L.models.push(v);saveLocal();render();$('mS').focus()}}});
+document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&cur){const v=e.target.value.trim();if(v&&!cur.L.models.includes(v)){cur.L.models.push(v);cur.L.modelTouched=1;saveLocal();render();$('mS').focus()}}});
 $('ver').textContent='v'+VER;
 $('autoAi').checked=CFG.autoAi!==false;$('autoAi').onchange=e=>{CFG.autoAi=e.target.checked;saveCfg()};
 if(!CFG.done){$('setBox').open=true;$('firstTip').style.display=''}
