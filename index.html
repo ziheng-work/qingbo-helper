@@ -54,18 +54,32 @@ details summary{cursor:pointer;font-weight:600}
       <p class="hint" style="margin:0">字段名（按包含匹配，表头改名了在这里改）</p>
       <div id="fmap" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px"></div>
       <button id="reload">重新读取字段</button>
+      <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
+      <b style="font-size:13px">API（可选）</b>
+      <p class="hint" style="margin:0">填了就能全自动：直接建单（含截图、型号）、首回、写进展、关单。公司的或自己搭的都行，只存在你自己浏览器里。</p>
+      <label>API 地址<input id="apiBase" placeholder="https://你的服务地址/api/v1"></label>
+      <label>API Key<input id="apiKey" type="password" placeholder="粘贴 API Key（⌘V）" autocomplete="off"></label>
+      <div class="row"><button id="apiTest">测试连接</button><button id="apiClear">清除</button><span class="chip" id="apiState">未连接</span></div>
+      <details><summary class="hint">接口约定（给搭 API 的人看）</summary><div class="out" style="font-size:12px">请求头 Authorization: Bearer &lt;API Key&gt;，JSON
+GET  /health → {ok:true,user}
+POST /tickets {user,type,plat,time,link,desc,fan_level,pri,models[],screenshot_base64} → {ticket_no}
+POST /tickets/{no}/first-reply
+POST /tickets/{no}/progress {note}
+POST /tickets/{no}/close {reason,user_replied}
+POST /tickets/{no}/terminate {reason}
+出错返回 {error}，Key 失效 401；需允许跨域（CORS）</div></details>
     </div>
   </details>
 
-  <div id="main"><div class="card empty">在表格里点选一条帖子（任意单元格），这里会显示录单和回写面板。</div></div>
+  <div id="main"><div class="card empty">在表格里点选一行（任意单元格）。清博表里显示录单面板，社媒帖处理系统里显示进展和关单面板。</div></div>
 </div>
 <div class="toast" id="toast"></div>
 <script src="sdk.js"></script>
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注'};
-const LBL={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'状态',s_prog:'当前进展',s_reason:'关单原因',s_replied:'用户是否回复'};
+const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
 const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
@@ -100,20 +114,37 @@ let LOCAL={};
 try{Object.assign(CFG,JSON.parse(localStorage.getItem('qbcfg')||'{}'));CFG.fmap={...DEF,...CFG.fmap};LOCAL=JSON.parse(localStorage.getItem('qblocal')||'{}')}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('qbcfg',JSON.stringify(CFG))}catch(e){}};
 const saveLocal=()=>{try{localStorage.setItem('qblocal',JSON.stringify(LOCAL))}catch(e){}};
+const API={base:'',key:'',ok:false};
+try{Object.assign(API,JSON.parse(localStorage.getItem('qbapi')||'{}'),{ok:false})}catch(e){}
+const saveApi=()=>{try{localStorage.setItem('qbapi',JSON.stringify({base:API.base,key:API.key}))}catch(e){}};
+async function call(method,path,body){
+  if(!API.base||!API.key)throw new Error('先在设置里填 API 地址和 API Key');
+  let r;try{r=await fetch(API.base.replace(/\/$/,'')+path,{method,headers:{'Authorization':'Bearer '+API.key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}catch(e){throw new Error('连不上 API（地址错，或服务没开跨域）')}
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401)throw new Error('API Key 无效或过期');
+  if(!r.ok)throw new Error(j.error||('API 返回 '+r.status));
+  return j;
+}
+const normLink=u=>{try{const x=new URL(u);return (x.host+x.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return (u||'').trim().toLowerCase()}};
+let MODE='',SHOT='';
 
-let table=null,metas=[],F={},cur=null,userId='',busy=false;
+let table=null,metas=[],F={},cur=null,userId='',busy=false,confirmShot=0;
 
 function findField(name){if(!name)return null;return metas.find(m=>m.name===name)||metas.find(m=>m.name.includes(name))||null}
 async function loadFields(){
   table=await bitable.base.getActiveTable();
   metas=await table.getFieldMetaList();
   F={};for(const k in DEF)F[k]=findField(CFG.fmap[k]);
-  $('fmap').innerHTML=Object.keys(DEF).map(k=>`<label style="font-size:12px;color:var(--mute)">${LBL[k]}${F[k]?' ✓':' ✕'}<input data-fm="${k}" value="${esc(CFG.fmap[k])}"></label>`).join('');
-  $('conn').textContent=F.url?'已连接':'没找到「录单URL」字段';$('conn').className='chip '+(F.url?'g':'r');
+  MODE=F.url?'qb':((F.s_prog||F.s_case)?'sm':'');
+  const keys=Object.keys(DEF).filter(k=>MODE==='sm'?(k.startsWith('s_')||k==='pri'):!k.startsWith('s_'));
+  $('fmap').innerHTML=keys.map(k=>`<label style="font-size:12px;color:var(--mute)">${LBL[k]}${F[k]?' ✓':' ✕'}<input data-fm="${k}" value="${esc(CFG.fmap[k])}"></label>`).join('');
+  $('conn').textContent=MODE==='qb'?'已连接·清博':MODE==='sm'?'已连接·社媒系统':'这张表不认识';$('conn').className='chip '+(MODE?'g':'r');
 }
 async function cell(k,rid){const f=F[k];if(!f)return '';try{return (await table.getCellString(f.id,rid))||''}catch(e){return ''}}
 
 async function loadRecord(rid){
+  if(MODE==='sm')return loadSM(rid);
+  SHOT='';
   const v={};for(const k in DEF)v[k]=await cell(k,rid);
   const o={};
   try{const p=new URL(v.url).searchParams;for(const[k,n]of Object.entries(K)){const x=p.get('prefill_'+n);if(x)o[k]=x.trim()}o.base=v.url.split('?')[0]}catch(e){}
@@ -121,6 +152,7 @@ async function loadRecord(rid){
   if(!L.models.length&&!L._sug){L.models=[];L._sug=1}
   cur={rid,v,o,L,desc:o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
   if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
+  if(o.link){LOCAL._links=LOCAL._links||{};LOCAL._links[normLink(o.link)]=rid;saveLocal()}
   render();
 }
 
@@ -134,6 +166,7 @@ const priOpts=()=>{const o=F.pri&&(F.pri.type===FieldType.SingleSelect||F.pri.ty
 const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property?.options||[]).map(o=>o.name):[];
 
 function render(){
+  if(cur&&cur.sm)return renderSM();
   const c=cur;if(!c)return;const L=c.L,v=c.v;
   const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复';
   const qbPri=(v.pri||'').trim(),sp=qbPri?'':sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
@@ -166,7 +199,9 @@ function render(){
    ${blocked||noRec?'<p class="hint">这条不录单。</p>':`
    <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
    <p class="hint">已带入：用户名、类型、渠道、时间、链接、简述${fp?'、优先级 '+fp:''}${fl?'、粉丝档位':''}。表单里还要：${fp?'':'选优先级、'}${fl?'':'选粉丝档位、'}粘截图、选型号。</p>
-   <h3>提交后填社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">`}
+   <h3>提交后填社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">
+   ${API.ok?`<h3>API 全自动建单</h3><div id="shotBox" tabindex="0" style="border:1px dashed var(--line);border-radius:6px;padding:10px;text-align:center;font-size:13px;color:var(--mute);cursor:text">${SHOT?'<img src="'+SHOT+'" style="max-width:100%;max-height:140px">':'点这里后 ⌘V 粘贴帖子截图（⌘+Ctrl+Shift+4 截图）'}</div>
+   <button class="primary" id="apiCreate" style="width:100%;margin-top:6px" ${L.ticket?'disabled':''}>${L.ticket?'已建单 '+esc(L.ticket):'一键建单 + 回写清博'}</button>`:'<p class="hint">在设置里填好 API，就能连截图一起一键建单。</p>'}`}
   </div>
 
   <div class="card wb"><h2><span class="n">4</span>回写清博（只写这一行）</h2>
@@ -194,6 +229,56 @@ function render(){
   </div>`;
 }
 
+async function loadSM(rid){
+  const v={};for(const k of ['s_case','s_user','s_link','s_status','s_prog','s_reason','s_replied','pri'])v[k]=await cell(k,rid);
+  const key='sm:'+rid;
+  if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,from:q?1:0};saveLocal()}
+  cur={rid,v,L:LOCAL[key],sm:1};renderSM();
+}
+const optOf=(f,want)=>{const o=(f&&f.property&&f.property.options)||[];return o.find(x=>x.name===want)||o.find(x=>x.name.startsWith(want))||o.find(x=>x.name.includes(want))};
+function renderSM(){
+  const c=cur,L=c.L,v=c.v,cl=L.close!=null?CLOSE[L.close]:null;
+  $('main').innerHTML=`
+  <div class="card"><h2><span class="n">1</span>工单</h2>
+   <dl class="kv"><dt>单号</dt><dd>${esc(v.s_case||'—')}</dd><dt>用户</dt><dd>${esc(v.s_user||'—')}</dd><dt>优先级</dt><dd>${esc(v.pri||'—')}</dd><dt>状态</dt><dd>${esc(v.s_status||'—')}</dd></dl>
+   ${L.from?'<div class="ok">已从清博插件带过来你写的进展选项。</div>':''}
+   <h3>现有当前进展</h3><div class="out" style="max-height:120px;overflow:auto">${esc(v.s_prog||'（空）')}</div>
+  </div>
+  <div class="card"><h2><span class="n">2</span>写当前进展</h2>
+   <div class="row"><input id="acc" list="accs" value="${esc(L.acc)}" placeholder="回复账号" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
+   <div class="seg" style="margin-top:6px">${ACTS.map(a=>`<button data-act="${a}" class="${L.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+   <input id="extra" value="${esc(L.extra)}" placeholder="补充：知识库、网盘链接、和谁确认过" style="margin-top:6px">
+   <div class="out" id="note">${esc(noteText(c))}</div>
+   <div class="row"><button class="danger" id="smNote">${L.arm==='note'?'再点一次确认写入':'写入当前进展（加在最上面）'}</button><button data-copy="note">复制</button>${API.ok?'<button id="apiNote">走 API 写</button>':''}</div>
+   <p class="hint">要先把自己加进该单「待首回」节点的分配人员，否则字段是灰的、会写入失败。</p>
+  </div>
+  <div class="card"><h2><span class="n">3</span>首回 · 关单</h2>
+   ${API.ok?'<button id="apiFirst" style="width:100%">走 API 完成首回</button>':'<p class="hint" style="margin-top:0">首回：回复实际发出后，在流程里点「待首回」的完成节点（插件点不了流程按钮；接了 API 就能一键）。</p>'}
+   <h3>关单向导</h3>
+   <select id="closeQ"><option value="">现在是什么情况？</option>${CLOSE.map((x,i)=>`<option value="${i}" ${L.close===i?'selected':''}>${x.q}</option>`).join('')}</select>
+   ${cl?(cl.act?`<div class="ok">关单原因：<b>${cl.r}</b><br>用户是否回复：${cl.u}</div>
+     <div class="row" style="margin-top:6px"><button class="danger" id="smClose">${L.arm==='close'?'再点一次确认写入':'写入关单原因 + 用户是否回复'}</button>${API.ok?'<button class="primary" id="apiClose">走 API 直接关单</button>':''}</div>
+     ${API.ok?'':'<p class="hint">写完后在流程里点到「待关单」→ 完成节点。</p>'}`:`<div class="alert">${cl.note}</div>`):''}
+  </div>`;
+}
+async function writeSM(kind){
+  const c=cur,L=c.L,T=FieldType,done=[],err=[];
+  try{
+    if(kind==='note'){
+      const f=F.s_prog;if(!f)throw new Error('没找到「当前进展」字段');
+      const nv=noteText(c)+(c.v.s_prog?'\n'+c.v.s_prog:'');
+      await writeVal(f,nv);done.push(f.name);
+    }else{
+      const cl=CLOSE[L.close];
+      for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){
+        if(!f||!val)continue;
+        try{if(f.type===T.SingleSelect||f.type===T.MultiSelect){const o=optOf(f,val);if(!o)throw new Error('「'+f.name+'」没有「'+val+'」这个选项');await writeVal(f,o.name)}else await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}
+      }
+    }
+  }catch(e){err.push(e.message||String(e))}
+  toast(done.length?'已写：'+done.join('、'):'没有写入');if(err.length)setTimeout(()=>toast(err.join('；')),1900);
+  await loadSM(c.rid);
+}
 async function writeVal(f,val){
   const T=FieldType;let cv;
   if(f.type===T.SingleSelect){const o=(f.property?.options||[]).find(o=>o.name===val);if(!o)throw new Error('「'+f.name+'」没有选项「'+val+'」，没写入（不会新建选项）');cv={id:o.id,text:o.name}}
@@ -232,6 +317,12 @@ document.addEventListener('click',async e=>{
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
   else if(t.dataset.copy==='reason')copy(CLOSE[L.close].r);
+  else if(t.id==='smNote'||t.id==='smClose'){const k=t.id==='smNote'?'note':'close';if(L.arm!==k){L.arm=k;renderSM();setTimeout(()=>{if(cur&&cur.L===L&&L.arm===k){L.arm='';renderSM()}},5000);return}L.arm='';if(busy)return;busy=true;try{await writeSM(k)}finally{busy=false}}
+  else if(t.id==='apiCreate'){if(!L.models.length){toast('先选产品型号');return}if(!formPri(L.pri)){toast('先打优先级');return}if(!SHOT&&!confirmShot){confirmShot=1;toast('还没粘截图，再点一次就不带截图建单');return}confirmShot=0;t.disabled=true;
+    try{const j=await call('POST','/tickets',{user:cur.o.user,type:cur.o.type,plat:cur.o.plat,time:cur.o.time,link:cur.o.link,desc:cur.desc,fan_level:fanBucket(cur.fans)||cur.o.fan||'',pri:formPri(L.pri),models:L.models,screenshot_base64:SHOT||undefined});L.ticket=j.ticket_no||'';saveLocal();L.w_note=true;await writeBack();toast('已建单 '+L.ticket+' 并回写清博')}catch(e){t.disabled=false;toast(e.message)}}
+  else if(t.id==='apiNote'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/progress',{note:noteText(cur)});toast('进展已写入');loadSM(cur.rid)}catch(e){toast(e.message)}}
+  else if(t.id==='apiFirst'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/first-reply');toast('已完成首回');loadSM(cur.rid)}catch(e){toast(e.message)}}
+  else if(t.id==='apiClose'){const cl=CLOSE[L.close];try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/close',{reason:cl.r,user_replied:cl.u});toast('已关单');loadSM(cur.rid)}catch(e){toast(e.message)}}
   else if(t.id==='wb'){if(busy)return;if(!L.wbArm){L.wbArm=1;render();setTimeout(()=>{if(cur&&cur.L===L&&L.wbArm){L.wbArm=0;render()}},5000);return}L.wbArm=0;busy=true;t.disabled=true;try{await writeBack()}finally{busy=false}}
 });
 document.addEventListener('input',e=>{
@@ -252,6 +343,11 @@ document.addEventListener('change',e=>{
   else if(t.id==='closeQ'){L.close=t.value===''?null:+t.value;saveLocal();render()}
   else if(t.id==='desc'){render()}
 });
+document.addEventListener('paste',e=>{
+  if(!cur||cur.sm)return;const box=$('shotBox');if(!box||!(document.activeElement===box||box.contains(document.activeElement)))return;
+  const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(!it){toast('剪贴板里没有图片');return}
+  e.preventDefault();const fr=new FileReader();fr.onload=()=>{SHOT=fr.result;render();toast('截图已粘贴')};fr.readAsDataURL(it.getAsFile());
+});
 document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&cur){const v=e.target.value.trim();if(v&&!cur.L.models.includes(v)){cur.L.models.push(v);saveLocal();render();$('mS').focus()}}});
 $('me').value=CFG.me;$('intern').checked=CFG.intern;
 $('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
@@ -259,6 +355,11 @@ $('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
 $('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toast('已重新读取')};
 document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
 
+$('apiBase').value=API.base||'';$('apiKey').value=API.key||'';
+['apiBase','apiKey'].forEach(id=>$(id).oninput=e=>{API[id==='apiBase'?'base':'key']=e.target.value.trim();API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip';saveApi()});
+$('apiTest').onclick=async()=>{try{const j=await call('GET','/health');API.ok=true;$('apiState').textContent='已连接'+(j.user?' · '+j.user:'');$('apiState').className='chip g';if(cur)render()}catch(e){API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip r';toast(e.message)}};
+$('apiClear').onclick=()=>{API.key='';API.ok=false;$('apiKey').value='';saveApi();$('apiState').textContent='未连接';$('apiState').className='chip';if(cur)render();toast('已清除')};
+if(API.base&&API.key)$('apiTest').onclick();
 (async()=>{
   if(!bitable){$('conn').textContent='SDK 没加载';$('conn').className='chip r';return}
   const notInBase=()=>{if($('conn').textContent!=='连接中…')return;$('conn').textContent='未连接';$('conn').className='chip r';$('main').innerHTML='<div class="card empty">要在电脑上的飞书多维表格里打开：表格右上角「插件」→ 自定义插件 → 粘贴本页网址。<br>直接用浏览器或手机打开是连不上表格的。</div>'};
