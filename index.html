@@ -87,12 +87,13 @@ POST /tickets/{no}/terminate {reason}
   <div class="alert" id="err" style="display:none;margin:0"><span id="errT"></span> <button id="errX" style="min-height:22px;padding:0 8px;font-size:12px;float:right">知道了</button></div>
   <div id="main"><div class="card empty">在表格里点选一行（任意单元格）。清博表里显示录单面板，社媒帖处理系统里显示进展和关单面板。</div></div>
 </div>
+<p class="hint" style="text-align:center;margin:4px 0 12px">开发：曾子恒 Ziheng Zeng</p>
 <div class="toast" id="toast"></div>
 <script src="sdk.js"></script>
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'状态',s_prog:'当前进展',s_reason:'关单原因',s_replied:'用户是否回复'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
 const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
@@ -115,7 +116,7 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.10';
+const VER='1.11';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -129,7 +130,7 @@ const formPri=p=>{const m=/^P[0-3]/.exec(p||'');return m?m[0]:(/无需/.test(p||
 
 let CFG={me:'',intern:false,fmap:{...DEF}};
 let LOCAL={};
-try{Object.assign(CFG,JSON.parse(localStorage.getItem('qbcfg')||'{}'));CFG.fmap={...DEF,...CFG.fmap};LOCAL=JSON.parse(localStorage.getItem('qblocal')||'{}')}catch(e){}
+try{Object.assign(CFG,JSON.parse(localStorage.getItem('qbcfg')||'{}'));CFG.fmap={...DEF,...CFG.fmap};if(CFG.fmap.s_status==='状态')CFG.fmap.s_status=DEF.s_status;if(CFG.fmap.s_reason==='关单原因')CFG.fmap.s_reason=DEF.s_reason;LOCAL=JSON.parse(localStorage.getItem('qblocal')||'{}')}catch(e){}
 const saveCfg=()=>{try{localStorage.setItem('qbcfg',JSON.stringify(CFG))}catch(e){}};
 const saveLocal=()=>{try{localStorage.setItem('qblocal',JSON.stringify(LOCAL))}catch(e){}};
 const API={base:'',key:'',ok:false};
@@ -174,7 +175,7 @@ async function aiJudge(c){
 
 let table=null,metas=[],F={},cur=null,userId='',busy=false,confirmShot=0;
 
-function findField(name){if(!name)return null;return metas.find(m=>m.name===name)||metas.find(m=>m.name.includes(name))||null}
+function findField(name){if(!name)return null;const n=name.trim();return metas.find(m=>m.name===n)||metas.find(m=>m.name.startsWith(n+'/')||m.name.startsWith(n+' /'))||metas.find(m=>m.name.startsWith(n))||metas.find(m=>m.name.includes(n))||null}
 async function loadFields(){
   table=await bitable.base.getActiveTable();
   metas=await table.getFieldMetaList();
@@ -306,6 +307,7 @@ function renderSM(){
   <div class="card"><h2><span class="n">1</span>工单</h2>
    <dl class="kv"><dt>单号</dt><dd>${esc(v.s_case||'—')}</dd><dt>用户</dt><dd>${esc(v.s_user||'—')}</dd><dt>优先级</dt><dd>${esc(v.pri||'—')}</dd><dt>状态</dt><dd>${esc(v.s_status||'—')}</dd></dl>
    ${L.from?'<div class="ok">已从清博插件带过来你写的进展选项。</div>':''}
+   <p class="hint" style="margin:6px 0 0">读到的字段：${['s_user','pri','s_status','s_prog','s_reason','s_replied'].map(k=>F[k]?esc(F[k].name):'✕').join('｜')}</p>
    <h3>现有当前进展</h3><div class="out" style="max-height:120px;overflow:auto">${esc(v.s_prog||'（空）')}</div>
   </div>
   <div class="card"><h2><span class="n">2</span>写当前进展</h2>
