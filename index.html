@@ -261,6 +261,9 @@ document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>
 
 (async()=>{
   if(!bitable){$('conn').textContent='SDK 没加载';$('conn').className='chip r';return}
+  const notInBase=()=>{if($('conn').textContent!=='连接中…')return;$('conn').textContent='未连接';$('conn').className='chip r';$('main').innerHTML='<div class="card empty">要在电脑上的飞书多维表格里打开：表格右上角「插件」→ 自定义插件 → 粘贴本页网址。<br>直接用浏览器或手机打开是连不上表格的。</div>'};
+  if(window.top===window){notInBase();return}
+  setTimeout(notInBase,6000);
   try{
     try{const th=await bitable.bridge.getTheme();document.body.classList.toggle('dark',th==='DARK');bitable.bridge.onThemeChange(ev=>document.body.classList.toggle('dark',ev.data.theme==='DARK'))}catch(e){}
     await loadFields();
