@@ -52,7 +52,7 @@ details summary{cursor:pointer;font-weight:600}
     <summary>设置</summary>
     <div style="display:grid;gap:8px;margin-top:8px">
       <div class="ok" id="firstTip" style="display:none;margin:0">第一次用：装桥接扩展，粘 AI Key 点「连接」，就可以了。</div>
-      <label id="meWrap"><b style="font-size:13px;color:var(--ink)">进展落款</b>（「当前进展」里你平时怎么落款就填什么，名字或缩写都行。写出来就是「11.20 …：已评论回复」）<input id="me" placeholder="名字或缩写"></label>
+      <label id="meWrap"><b style="font-size:13px;color:var(--ink)">进展落款</b>（「当前进展」里你平时怎么落款就填什么，名字或缩写都行。写出来就是「11.20 落款：你做了什么」，内容每张单可以改）<input id="me" placeholder="名字或缩写"></label>
       <b style="font-size:13px">桥接扩展</b>
       <p class="hint" style="margin:0">AI 判断、表单里自动选产品型号都要用它。下载并解压 → Chrome 地址栏打开 chrome://extensions → 打开右上角「开发者模式」→ 点「加载未打包的扩展程序」选解压出的文件夹 → 回来刷新本页。</p>
       <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
@@ -96,8 +96,8 @@ POST /tickets/{no}/terminate {reason}
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',qshot:'帖子截图',reply:'回复内容',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
-const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',qshot:'清博·帖子截图',reply:'清博·回复内容（有就给 AI 参考）',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',qshot:'帖子截图',reply:'回复内容',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复',s_creator:'创建人',s_desc:'帖子简述',s_model:'产品型号'};
+const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',qshot:'清博·帖子截图',reply:'清博·回复内容（有就给 AI 参考）',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复',s_creator:'社媒·创建人',s_desc:'社媒·帖子简述',s_model:'社媒·产品型号'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
 const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.35';
+const VER='1.36';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -344,11 +344,64 @@ async function runAi(){
   try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}await autoClose(c)}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
   BUSY.delete(c.rid);saveLocal();if(cur===c)render();
 }
+function smL(rid,v){
+  const key='sm:'+rid;
+  if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,closeAi:q?.closeAi||'',closeTouched:q?.closeTouched||0,from:q?1:0};saveLocal()}
+  return LOCAL[key];
+}
+const SMB={rows:[],scan:0,scanned:0,run:0,msg:{},off:{},info:'',total:0};
+const defNote=L=>{const d=bdef();if(!L.acts.length&&!L.extra){L.acts=[...d.acts];if(d.extra)L.extra=d.extra}if(!L.wait&&d.wait)L.wait=d.wait};
+async function scanSM(){
+  if(SMB.scan||SMB.run)return;SMB.scan=1;SMB.info='';renderPend();
+  try{
+    if(!F.s_prog)throw new Error('没找到「当前进展」这一列');
+    if(!F.s_creator)throw new Error('没找到「创建人」这一列（在设置的字段名里改）');
+    if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}
+    const view=await table.getActiveView();const ids=(await view.getVisibleRecordIdList()).filter(Boolean).slice(0,3000);
+    const mine=[];
+    for(let k=0;k<ids.length;k+=30){
+      const part=ids.slice(k,k+30);
+      const hs=await Promise.all(part.map(async id=>{try{const val=await table.getCellValue(F.s_creator.id,id);const a=Array.isArray(val)?val:(val?[val]:[]);if(a.some(u=>u&&u.id&&u.id===userId))return true;if(CFG.me&&a.some(u=>u&&String(u.name||u.text||'').includes(CFG.me)))return true}catch(e){}return false}));
+      part.forEach((id,i)=>{if(hs[i])mine.push(id)});
+    }
+    const rows=[];
+    for(const rid of mine){
+      const v={};for(const k of ['s_case','s_user','s_link','s_status','s_prog','s_reason','s_replied','pri','s_desc','s_model'])v[k]=await cell(k,rid);
+      if((v.s_reason||'').trim())continue;
+      if(CFG.me&&(v.s_prog||'').includes(CFG.me+'：'))continue;
+      if(/已关单|终止|已完成/.test(v.s_status||''))continue;
+      const L=smL(rid,v);L.pri=(v.pri||'').trim();L.models=(v.s_model||'').split(/[,，、;；\n]+/).map(x=>x.trim()).filter(Boolean);
+      v.title='';
+      rows.push({rid,v,L,sm:1,o:{plat:'',link:v.s_link,user:v.s_user},desc:v.s_desc||''});
+    }
+    for(const c of rows){const L=c.L;defNote(L);if(!L.acc)L.acc=((CFG.accs&&CFG.accs[platOf(c)])||[])[0]||'';
+      if(L.close==null&&!L.closeTouched){SMB.info='判断关单原因：'+(c.v.s_user||'');renderPend();try{await autoClose(c)}catch(e){}}}
+    saveLocal();SMB.rows=rows;SMB.scanned=1;SMB.info=rows.length?'找到你的 '+rows.length+' 张还没写进展的单':'当前视图里没有你创建的、还没写进展的单';
+  }catch(e){SMB.info='';fail('找单失败：'+(e.message||e))}
+  SMB.scan=0;renderPend();
+}
+async function smWrite(rid,L){
+  const done=[];
+  if(F.s_prog){const old=(await table.getCellString(F.s_prog.id,rid))||'';const note=noteText({L});if(!old.includes(note.slice(note.indexOf('：')))){await writeVal(F.s_prog,note+(old?'\n'+old:''),rid);done.push('进展')}else done.push('进展已有')}
+  const cl=L.close!=null?CLOSE[L.close]:null;
+  if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
+  return done;
+}
+async function runSM(){
+  if(SMB.run)return;SMB.run=1;SMB.msg={};
+  const list=SMB.rows.filter(c=>!SMB.off[c.rid]&&!c.done);SMB.total=list.length;renderPend();
+  for(const c of list){
+    SMB.msg[c.rid]='写入中…';renderPend();
+    try{const done=await smWrite(c.rid,c.L);c.done=1;const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='✓ '+done.join('、')}
+    catch(e){SMB.msg[c.rid]='✕ '+(e.message||String(e))}
+    renderPend();
+  }
+  SMB.run=0;SMB.info='完成 '+Object.values(SMB.msg).filter(m=>m.startsWith('✓')).length+'/'+list.length+' 张';
+  if(pendings().length)await syncAll();else renderPend();
+}
 async function loadSM(rid){
   const v={};for(const k of ['s_case','s_user','s_link','s_status','s_prog','s_reason','s_replied','pri'])v[k]=await cell(k,rid);
-  const key='sm:'+rid;
-  if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,from:q?1:0};saveLocal()}
-  cur={rid,v,L:LOCAL[key],sm:1};renderSM();
+  cur={rid,v,L:smL(rid,v),sm:1};renderSM();
 }
 const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||(L.link&&(L.wbDone||L.submitted)))&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
 async function findTicket(no,link){
@@ -416,7 +469,7 @@ function renderBatch(){
   if(BATCH.run)btn=`<button class="primary big" disabled>录单中… ${Math.min(prog,BATCH.total||0)}/${BATCH.total||0}</button>`;
   else if(BATCH.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
   else if(!BATCH.scanned)btn=`<button class="primary big" id="bScan">一键录单</button>`;
-  else if(sel.length)btn=`<button class="danger big" id="bGo" ${brOk&&d.acts.length?'':'disabled'}>确认录单 ${sel.length} 条</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="bGo" ${brOk&&(d.acts.length||d.extra)?'':'disabled'}>确认录单 ${sel.length} 条</button>`;
   else btn=`<button class="big" id="bScan">${rows.length?'没有可录的了 · 重新找':'没找到你的待录单 · 重新找'}</button>`;
   const ico={ok:'',done:'✓',wb:'!',hold:'!',skip:'✕'};
   el.innerHTML=`<div class="card">
@@ -431,6 +484,7 @@ function renderBatch(){
     ${need.filter(n=>!miss.includes(n)).map(faccSel).join('')}
     <p class="hint" style="margin:8px 0 4px">写进社媒系统的进展（这批都做了什么）：</p>
     <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+    <input id="bExtra" value="${esc(d.extra||'')}" placeholder="或者自己写一句，比如：Support号回复 发话题" style="margin-top:6px">
     <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
     <button id="bScan2" style="width:100%;margin-top:8px">重新找一遍</button>
     <p class="hint">「确认录单」会真的提交表单，撤不回。圆角标签是 AI 判断的关单原因，不对点「改」。</p>
@@ -441,8 +495,7 @@ function applyDefaults(c){
   const L=c.L,d=bdef(),fa=formAcc(c),p=platOf(c);
   if(fa&&!L.facc&&CFG.faccDef&&CFG.faccDef[fa[0]])L.facc=CFG.faccDef[fa[0]];
   if(L.progSel==null){const po=progOpts();L.progSel=po.includes('已录单')?'已录单':''}
-  if(!L.acts.length)L.acts=[...d.acts];
-  if(!L.wait&&d.wait)L.wait=d.wait;
+  defNote(L);
   if(!L.acc)L.acc=(L.facc&&L.facc!=='其他'?L.facc:'')||((CFG.accs&&CFG.accs[p]||[])[0])||'';
 }
 async function batchWb(c){
@@ -477,13 +530,30 @@ async function runBatch(onlyWb){
 }
 function renderPend(){
   const el=$('pend');if(!el)return;if(MODE==='qb'){renderBatch();return}if(MODE!=='sm'){el.innerHTML='';return}
-  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND,CFG.me]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
+  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',rows=SMB.rows,sel=rows.filter(c=>!SMB.off[c.rid]&&!c.done),d=bdef();
+  const chip=L=>{const ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return ct?` <span class="chip" title="${esc(L.closeAi||'')}">${esc(ct)}</span>`:''};
+  const moreOpen=el.querySelector('#sMore')?.open;
+  let btn;
+  if(SMB.run||PEND.run)btn=`<button class="primary big" disabled>写入中…</button>`;
+  else if(SMB.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
+  else if(!SMB.scanned)btn=`<button class="primary big" id="sScan" ${CFG.me?'':'disabled'}>一键处理我的单</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="sGo">确认写入 ${sel.length} 张</button>`;
+  else btn=`<button class="big" id="sScan">${rows.length?'都写完了 · 重新找':'没有要写的单 · 重新找'}</button>`;
   el.innerHTML=`<div class="card">
-   <button class="${ps.length?'danger':''} big" id="pendGo" ${PEND.run||!ps.length||!CFG.me?'disabled':''}>${PEND.run?'写入中…':ps.length?'一键写进社媒系统（'+ps.length+'）':'没有要写的单'}</button>
-   ${ps.length&&!CFG.me?'<div class="alert">先在上面「设置」里填「进展落款」（你的名字或缩写），进展要用。</div>':''}
-   <p class="hint" style="text-align:center">${ps.length?'<b>录完单、回复实际发出后再点。</b>自动找单，写进展和关单原因':'在清博表录完单的帖子会出现在这里'}</p>
-   ${ps.map(([k,L])=>{const m=PEND.msg[k],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li"><span class="t"><b>${esc(L.user||'（无用户名）')}</b>${ct?` <span class="chip">${esc(ct)}</span>`:''}<br><span class="s" style="color:var(--mute)">${esc(noteText({L}))}</span>${m?`<br><span class="s" style="color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</span></div>`}).join('')}
-   <details style="margin-top:8px"><summary class="hint" style="font-weight:400">按单号找单</summary><div class="row" style="margin-top:6px"><input id="findNo" value="${esc(fv)}" placeholder="如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div></details>
+   ${btn}
+   ${CFG.me?'':'<div class="alert">先在上面「设置」里填「进展落款」（你的名字或缩写）。</div>'}
+   <p class="hint" style="text-align:center">${esc(SMB.info)||'找出你创建的、还没写进展的单（清博录的、手动录的都算），写进展并判断关单原因。<b>回复实际发出后再点</b>'}</p>
+   ${rows.map(c=>{const L=c.L,m=SMB.msg[c.rid];return `<div class="li">${c.done?'<span style="width:16px;text-align:center;color:var(--ok)">✓</span>':`<input type="checkbox" data-ssel="${c.rid}" ${SMB.off[c.rid]?'':'checked'} ${SMB.run?'disabled':''}>`}<span class="t"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc((L.models||[])[0]||'')}</span>${chip(L)}<br><span class="s" style="color:${m?(m.startsWith('✓')?'var(--ok)':m.startsWith('✕')?'var(--red)':'var(--mute)'):'var(--mute)'}">${esc(m||noteText({L}))}</span></span><button class="lk" data-sopen="${c.rid}" ${SMB.run?'disabled':''}>改</button></div>`}).join('')}
+   ${ps.length&&SMB.scanned&&!sel.length&&!PEND.run&&!SMB.run?`<button id="pendGo" style="width:100%;margin-top:8px">清博录的还有 ${ps.length} 条没在当前视图找到，按链接再找一次</button>`:''}
+   ${ps.map(([k,L])=>PEND.msg[k]?`<div class="li"><span class="t"><b>${esc(L.user||'')}</b><br><span class="s" style="color:${PEND.msg[k].startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(PEND.msg[k])}</span></span></div>`:'').join('')}
+   <details id="sMore" style="margin-top:8px" ${moreOpen?'open':''}><summary class="hint" style="font-weight:400">更多选项</summary>
+    <p class="hint" style="margin:8px 0 4px">默认写的进展（没单独改过的单都用这个，改完点「重新找」生效）：</p>
+    <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+    <input id="bExtra" value="${esc(d.extra||'')}" placeholder="或者自己写一句，比如：Support号回复 发话题" style="margin-top:6px">
+    <button id="sScan2" style="width:100%;margin-top:8px">重新找一遍</button>
+    <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
+    <p class="hint">圆角标签是 AI 判断的关单原因，每张单的进展内容和关单原因都可以点「改」单独调。「待首回」「待关单」节点仍要自己点。</p>
+   </details>
   </div>`;
 }
 async function syncAll(){
@@ -580,14 +650,14 @@ async function writeBack(c=cur,quiet){
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'||t.id==='bScan2'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderBatch();return}if(t.dataset.bopen){e.preventDefault();$('mainBox').open=true;await loadRecord(t.dataset.bopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='bGo'){clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();$('mainBox').open=true;await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'||t.id==='bScan2'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderPend();return}if(t.dataset.bopen){e.preventDefault();$('mainBox').open=true;await loadRecord(t.dataset.bopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='bGo'){clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){await syncAll();return}if(t.id==='sScan'||t.id==='sScan2'){clearErr();if(t.id==='sScan2')for(const c of SMB.rows)if(!c.done&&!c.L.noteTouched){c.L.acts=[];c.L.extra=''}await scanSM();return}if(t.id==='sGo'){clearErr();await runSM();return}if(t.dataset.sopen){$('mainBox').open=true;await loadSM(t.dataset.sopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();$('mainBox').open=true;await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.facc){const a=t.dataset.facc;L.facc=L.facc===a?'':a;if(L.facc&&L.facc!=='其他')L.acc=L.facc;saveLocal();render()}
   else if(t.dataset.acc){L.acc=L.acc===t.dataset.acc?'':t.dataset.acc;saveLocal();render()}
   else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;L.closeTouched=1;saveLocal();if(cur.sm)renderSM();else render()}
-  else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
+  else if(t.dataset.act){L.noteTouched=1;const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
   else if(t.dataset.copy==='reason')copy(CLOSE[L.close].r);
@@ -602,17 +672,18 @@ document.addEventListener('click',async e=>{
   else if(t.id==='wb'){if(busy)return;if(!L.wbArm){L.wbArm=1;render();setTimeout(()=>{if(cur&&cur.L===L&&L.wbArm){L.wbArm=0;render()}},5000);return}L.wbArm=0;busy=true;t.disabled=true;try{await writeBack()}finally{busy=false}}
 });
 document.addEventListener('input',e=>{
+  if(e.target.id==='bExtra'){bdef().extra=e.target.value.trim();saveCfg();return}
   if(e.target.dataset.fm){CFG.fmap[e.target.dataset.fm]=e.target.value.trim();saveCfg();return}
   if(!cur)return;const L=cur.L,id=e.target.id;
   if(id==='desc'){cur.desc=e.target.value}
   else if(id==='tk')L.ticket=e.target.value.trim();
   else if(id==='acc')L.acc=e.target.value;
-  else if(id==='extra')L.extra=e.target.value;
+  else if(id==='extra'){L.extra=e.target.value;L.noteTouched=1}
   else return;
   saveLocal();const n=$('note');if(n)n.textContent=noteText(cur);
 });
 document.addEventListener('change',e=>{
-  {const t=e.target;if(t.dataset.bfacc){CFG.faccDef=CFG.faccDef||{};CFG.faccDef[t.dataset.bfacc]=t.value;saveCfg();renderBatch();return}if(t.id==='bWait'){bdef().wait=t.value;saveCfg();return}if(t.dataset.bsel){BATCH.off[t.dataset.bsel]=!t.checked;renderBatch();return}}
+  {const t=e.target;if(t.dataset.bfacc){CFG.faccDef=CFG.faccDef||{};CFG.faccDef[t.dataset.bfacc]=t.value;saveCfg();renderBatch();return}if(t.id==='bWait'){bdef().wait=t.value;saveCfg();return}if(t.dataset.bsel){BATCH.off[t.dataset.bsel]=!t.checked;renderBatch();return}if(t.dataset.ssel){SMB.off[t.dataset.ssel]=!t.checked;renderPend();return}}
   if(!cur)return;const L=cur.L,t=e.target;
   if(t.dataset.w){L['w_'+t.dataset.w]=t.checked;saveLocal()}
   else if(t.id==='acc'){const a=t.value.trim(),p=platOf(cur);if(a){CFG.accs=CFG.accs||{};const l=(CFG.accs[p]||[]).filter(x=>x!==a);l.unshift(a);CFG.accs[p]=l.slice(0,6);saveCfg()}render()}
