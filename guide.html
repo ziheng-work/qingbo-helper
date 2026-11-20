@@ -81,7 +81,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
   </ol>
   <h3 style="margin-top:14px"><span class="num">2</span>填名称和地址</h3>
   <p>名称随便填（建议「录单助手」），服务地址粘贴这一串，点确定：</p>
-  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=18</span>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=19</span>
   <p class="tip">插件是跟着你的飞书账号走的。在清博表装一次，社媒帖处理系统里也会有，不用装两遍。之后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
  </div>
  <div class="fig"><span class="cap">图示：入口在这里</span>
@@ -96,7 +96,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
  <div>
   <h3><span class="num">1</span>你的名字</h3>
   <p>填你平时在社媒系统「当前进展」里的落款，名字或缩写都行。插件生成的进展会是「11.20 你的名字：已评论回复」这种格式。</p>
-  <h3 style="margin-top:14px"><span class="num">2</span>装桥接扩展<small style="font-weight:400;color:var(--mute)">（要用 AI 判断才需要）</small></h3>
+  <h3 style="margin-top:14px"><span class="num">2</span>装桥接扩展<small style="font-weight:400;color:var(--mute)">（AI 判断、表单自动选型号都靠它）</small></h3>
   <ol>
    <li>点面板里的「下载扩展」，把下载的压缩包解压。</li>
    <li>Chrome 地址栏输入 <code>chrome://extensions</code> 回车。</li>
@@ -166,7 +166,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
    <li>小红书、企业微信的帖子，先在上面点选<b>具体账号</b>（表单必填，点了会一起预填）。</li>
    <li>点<b>「打开预填表单」</b>。用户名、渠道、时间、链接、简述、优先级、粉丝档位都已经填好。</li>
    <li><b>截图要自己贴</b>：在原帖按 <code>⌘+Ctrl+Shift+4</code> 框选帖子，回表单点截图框按 <code>⌘V</code>。</li>
-   <li><b>型号要自己选</b>：点「复制型号」，到表单的产品型号框里搜出来选上。</li>
+   <li><b>型号会自动选上</b>：表单打开后几秒，右下角出现绿色提示「已自动选上产品型号」。提示是红色或没出现时，点「复制型号」到表单里搜出来选上。</li>
    <li>检查一遍，提交表单。</li>
   </ol>
  </div>
@@ -175,7 +175,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
    <div style="color:var(--mute)">这个平台的表单要选「小红书具体账号」，先点一个：</div>
    <div class="chips"><span class="chip sug">影石Insta360技术君</span><span class="chip on">小影技术君</span><span class="chip sug">其他</span></div>
    <span class="btn blue">打开预填表单 ↗</span> <span class="btn">复制型号</span>
-   <div style="color:var(--mute);margin-top:6px">1. 已填好：用户名、渠道、时间、链接、简述…<br>2. 截图：⌘V 贴进表单<br>3. 型号：复制后在表单里搜<br>4. 提交</div>
+   <div style="color:var(--mute);margin-top:6px">1. 已填好：用户名、渠道、时间、链接、简述…<br>2. 截图：⌘V 贴进表单<br>3. 型号：扩展自动选上<br>4. 提交</div>
    <div class="inp">社媒单号（可不填）</div>
   </div>
  </div>
@@ -261,7 +261,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
 <table>
  <tr><th>事情</th><th>为什么插件做不了</th></tr>
  <tr><td>表单里贴原帖截图</td><td>飞书表单的附件不能用链接预填</td></tr>
- <tr><td>表单里选产品型号</td><td>型号是什么以清博表为准，插件已经帮你带出来；但飞书表单的这个字段不支持用链接预填，只能点「复制型号」后在表单里搜出来选上</td></tr>
+ <tr><td>表单里选产品型号（没装桥接扩展时）</td><td>型号以清博表为准。装了桥接扩展 1.1 会在表单里自动选上；没装就点「复制型号」后在表单里搜出来选</td></tr>
  <tr><td>点「提交」</td><td>提交前需要人检查一遍</td></tr>
  <tr><td>流程里「待首回」「待关单」的完成节点</td><td>流程按钮不对插件开放。回复实际发出后再点首回</td></tr>
  <tr><td>企业微信群的「具体群」</td><td>目前没预填，表单里手选</td></tr>
@@ -270,6 +270,7 @@ footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
 <h2 id="f">六、常见问题</h2>
 <table>
  <tr><th>现象</th><th>怎么办</th></tr>
+ <tr><td>表单里型号没有自动选上</td><td>到 <code>chrome://extensions</code> 看「录单助手桥接」是不是 1.1.0 以上；旧版要重新下载解压，覆盖原文件夹后点扩展卡片上的刷新按钮</td></tr>
  <tr><td>面板还是旧版本</td><td>面板右上「…」→ 编辑，把地址末尾的 <code>?v=</code> 数字改成最新的</td></tr>
  <tr><td>显示「这张表不认识」</td><td>插件只认清博表和社媒帖处理系统总表。换到这两张表的数据视图再打开</td></tr>
  <tr><td>AI 一直连不上</td><td>检查桥接扩展是否「已安装」、Key 是否有效；公司电脑如果禁了开发者模式，就不用 AI，手动打标</td></tr>
