@@ -114,9 +114,15 @@ const CLOSE=[
  {q:'还在等用户补资料 / 等 FAE',note:'不关，保持「已回，待用户回复」，进展写清在等什么'},
  {q:'P2 技术问题还没解决',note:'不关，推到「跟进中」并写进展'}];
 
+const PLATS=[[/facebook|fb\.com|fb\.watch/i,'Facebook'],[/douyin|抖音/i,'抖音'],[/xiaohongshu|xhslink|小红书/i,'小红书'],[/bilibili|b23\.tv|B站|哔哩/i,'B站'],[/weibo|微博/i,'微博'],[/reddit/i,'Reddit'],[/youtube|youtu\.be/i,'YouTube'],[/instagram/i,'Instagram'],[/tiktok/i,'TikTok'],[/twitter|\/\/x\.com/i,'X'],[/weixin|微信|视频号/i,'微信']];
+const platOf=c=>{const s=((c.o&&c.o.plat)||'')+' '+((c.o&&c.o.link)||'')+' '+((c.v&&c.v.s_link)||'');for(const[rx,n]of PLATS)if(rx.test(s))return n;return (c.o&&c.o.plat)||'其他'};
+const ACC_SEED={Facebook:['Support号','个人号']};
+const accList=p=>[...new Set([...((CFG.accs&&CFG.accs[p])||[]),...(ACC_SEED[p]||['官方号','个人号'])])];
+const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-bottom:6px"><span class="hint" style="align-self:center">${esc(p)}回复账号：</span>${accList(p).map(a=>`<button data-acc="${esc(a)}" class="${L.acc===a?'on':''}">${esc(a)}</button>`).join('')}</div>`};
+const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.11';
+const VER='1.12';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -270,13 +276,13 @@ function render(){
   <div class="card"><h2><span class="n">5</span>社媒系统：进展 · 关单</h2>
    <p class="hint" style="margin-top:0">回复实际发出后再点「待首回」完成节点；帖子已有单就别新建，在原单进展里续写。</p>
    <h3>当前进展</h3>
-   <div class="row"><input id="acc" list="accs" value="${esc(L.acc)}" placeholder="回复账号" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
+   ${accRow(c)}<div class="row"><input id="acc" value="${esc(L.acc)}" placeholder="回复账号（没有就手填，会按平台记住）" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
    <div class="seg" style="margin-top:6px">${ACTS.map(a=>`<button data-act="${a}" class="${L.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
    <input id="extra" value="${esc(L.extra)}" placeholder="补充：用了哪篇知识库、网盘链接、和谁确认过" style="margin-top:6px">
    <div class="out" id="note">${esc(noteText(c))}</div>
    <button data-copy="note">复制进展</button>
    <h3>关单向导</h3>
-   <select id="closeQ"><option value="">现在是什么情况？</option>${CLOSE.map((x,i)=>`<option value="${i}" ${L.close===i?'selected':''}>${x.q}</option>`).join('')}</select>
+   <p class="hint" style="margin:0 0 4px">现在是什么情况？点一个：</p>${closeList(L)}
    ${cl?(cl.act?`<div class="ok"><b>可以关单</b><br>用户是否回复：${cl.u}<br>关单原因：<b>${cl.r}</b></div><button data-copy="reason" style="margin-top:6px">复制关单原因</button>`:`<div class="alert">${cl.note}</div>`):''}
    <div class="ok" style="margin-top:10px"><b>下一步：去社媒系统</b>
     <ol style="padding-left:18px;margin:4px 0 0;line-height:1.7">
@@ -311,7 +317,7 @@ function renderSM(){
    <h3>现有当前进展</h3><div class="out" style="max-height:120px;overflow:auto">${esc(v.s_prog||'（空）')}</div>
   </div>
   <div class="card"><h2><span class="n">2</span>写当前进展</h2>
-   <div class="row"><input id="acc" list="accs" value="${esc(L.acc)}" placeholder="回复账号" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
+   ${accRow(c)}<div class="row"><input id="acc" value="${esc(L.acc)}" placeholder="回复账号（没有就手填，会按平台记住）" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
    <div class="seg" style="margin-top:6px">${ACTS.map(a=>`<button data-act="${a}" class="${L.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
    <input id="extra" value="${esc(L.extra)}" placeholder="补充：知识库、网盘链接、和谁确认过" style="margin-top:6px">
    <div class="out" id="note">${esc(noteText(c))}</div>
@@ -321,7 +327,7 @@ function renderSM(){
   <div class="card"><h2><span class="n">3</span>首回 · 关单</h2>
    ${API.ok?'<button id="apiFirst" style="width:100%">走 API 完成首回</button>':'<p class="hint" style="margin-top:0">首回：回复实际发出后，在流程里点「待首回」的完成节点（插件点不了流程按钮；接了 API 就能一键）。</p>'}
    <h3>关单向导</h3>
-   <select id="closeQ"><option value="">现在是什么情况？</option>${CLOSE.map((x,i)=>`<option value="${i}" ${L.close===i?'selected':''}>${x.q}</option>`).join('')}</select>
+   <p class="hint" style="margin:0 0 4px">现在是什么情况？点一个：</p>${closeList(L)}
    ${cl?(cl.act?`<div class="ok">关单原因：<b>${cl.r}</b><br>用户是否回复：${cl.u}</div>
      <div class="row" style="margin-top:6px"><button class="danger" id="smClose">${L.arm==='close'?'再点一次确认写入':'写入关单原因 + 用户是否回复'}</button>${API.ok?'<button class="primary" id="apiClose">走 API 直接关单</button>':''}</div>
      ${API.ok?'':'<p class="hint">写完后在流程里点到「待关单」→ 完成节点。</p>'}`:`<div class="alert">${cl.note}</div>`):''}
@@ -380,6 +386,8 @@ document.addEventListener('click',async e=>{
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
+  else if(t.dataset.acc){L.acc=L.acc===t.dataset.acc?'':t.dataset.acc;saveLocal();render()}
+  else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;saveLocal();render()}
   else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
@@ -407,6 +415,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   if(!cur)return;const L=cur.L,t=e.target;
   if(t.dataset.w){L['w_'+t.dataset.w]=t.checked;saveLocal()}
+  else if(t.id==='acc'){const a=t.value.trim(),p=platOf(cur);if(a){CFG.accs=CFG.accs||{};const l=(CFG.accs[p]||[]).filter(x=>x!==a);l.unshift(a);CFG.accs[p]=l.slice(0,6);saveCfg()}render()}
   else if(t.id==='wait'){L.wait=t.value;saveLocal();render()}
   else if(t.id==='progSel'){L.progSel=t.value;saveLocal()}
   else if(t.id==='closeQ'){L.close=t.value===''?null:+t.value;saveLocal();render()}
