@@ -51,12 +51,12 @@ details summary{cursor:pointer;font-weight:600}
   <details class="card" id="setBox">
     <summary>设置</summary>
     <div style="display:grid;gap:8px;margin-top:8px">
-      <div class="ok" id="firstTip" style="display:none;margin:0">第一次用，三步就好：① 填你的名字 ② 装桥接扩展 ③ 粘 Key 点「连接」。不用 AI 的话只做第 ① 步也行。</div>
-      <label><b style="font-size:13px;color:var(--ink)">① 你的名字</b>（社媒系统「当前进展」里你平时怎么落款就填什么，名字或缩写都行。生成的进展就是「11.20 …：已评论回复」）<input id="me" placeholder="名字或缩写"></label>
-      <b style="font-size:13px">② 装桥接扩展</b>
+      <div class="ok" id="firstTip" style="display:none;margin:0">第一次用：装桥接扩展，粘 AI Key 点「连接」，就可以了。</div>
+      <label id="meWrap"><b style="font-size:13px;color:var(--ink)">进展落款</b>（「当前进展」里你平时怎么落款就填什么，名字或缩写都行。写出来就是「11.20 …：已评论回复」）<input id="me" placeholder="名字或缩写"></label>
+      <b style="font-size:13px">桥接扩展</b>
       <p class="hint" style="margin:0">AI 判断、表单里自动选产品型号都要用它。下载并解压 → Chrome 地址栏打开 chrome://extensions → 打开右上角「开发者模式」→ 点「加载未打包的扩展程序」选解压出的文件夹 → 回来刷新本页。</p>
       <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
-      <label><b style="font-size:13px;color:var(--ink)">③ AI Key</b>（公司 AI 网关里自己建的 Key，只存在你的浏览器里）<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
+      <label><b style="font-size:13px;color:var(--ink)">AI Key</b>（公司 AI 网关里自己建的 Key，只存在你的浏览器里）<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
       <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「连接」</option></select><button id="aiModels">连接</button></div>
       <span class="chip" id="aiState">未连接</span>
       <button class="primary" id="setDone">设置好了，收起</button>
@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.34';
+const VER='1.35';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -216,6 +216,8 @@ async function loadFields(){
   MODE=F.url?'qb':((F.s_prog||F.s_case)?'sm':'');
   const keys=Object.keys(DEF).filter(k=>MODE==='sm'?(k.startsWith('s_')||k==='pri'):!k.startsWith('s_'));
   $('fmap').innerHTML=keys.map(k=>`<label style="font-size:12px;color:var(--mute)">${LBL[k]}${F[k]?' ✓':' ✕'}<input data-fm="${k}" value="${esc(CFG.fmap[k])}"></label>`).join('');
+  $('meWrap').style.display=MODE==='sm'?'':'none';
+  if(MODE==='sm'&&!CFG.me)$('setBox').open=true;
   renderPend();
   $('conn').textContent=MODE==='qb'?'已连接·清博':MODE==='sm'?'已连接·社媒系统':'这张表不认识';$('conn').className='chip '+(MODE?'g':'r');
 }
@@ -475,9 +477,10 @@ async function runBatch(onlyWb){
 }
 function renderPend(){
   const el=$('pend');if(!el)return;if(MODE==='qb'){renderBatch();return}if(MODE!=='sm'){el.innerHTML='';return}
-  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
+  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND,CFG.me]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
   el.innerHTML=`<div class="card">
-   <button class="${ps.length?'danger':''} big" id="pendGo" ${PEND.run||!ps.length?'disabled':''}>${PEND.run?'写入中…':ps.length?'一键写进社媒系统（'+ps.length+'）':'没有要写的单'}</button>
+   <button class="${ps.length?'danger':''} big" id="pendGo" ${PEND.run||!ps.length||!CFG.me?'disabled':''}>${PEND.run?'写入中…':ps.length?'一键写进社媒系统（'+ps.length+'）':'没有要写的单'}</button>
+   ${ps.length&&!CFG.me?'<div class="alert">先在上面「设置」里填「进展落款」（你的名字或缩写），进展要用。</div>':''}
    <p class="hint" style="text-align:center">${ps.length?'<b>录完单、回复实际发出后再点。</b>自动找单，写进展和关单原因':'在清博表录完单的帖子会出现在这里'}</p>
    ${ps.map(([k,L])=>{const m=PEND.msg[k],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li"><span class="t"><b>${esc(L.user||'（无用户名）')}</b>${ct?` <span class="chip">${esc(ct)}</span>`:''}<br><span class="s" style="color:var(--mute)">${esc(noteText({L}))}</span>${m?`<br><span class="s" style="color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</span></div>`}).join('')}
    <details style="margin-top:8px"><summary class="hint" style="font-weight:400">按单号找单</summary><div class="row" style="margin-top:6px"><input id="findNo" value="${esc(fv)}" placeholder="如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div></details>
@@ -627,9 +630,9 @@ document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&
 $('ver').textContent='v'+VER;
 $('autoAi').checked=CFG.autoAi!==false;$('autoAi').onchange=e=>{CFG.autoAi=e.target.checked;saveCfg()};
 if(!CFG.done){$('setBox').open=true;$('firstTip').style.display=''}
-$('setDone').onclick=()=>{if(!CFG.me){fail('先填一下你的名字（第 ① 步）');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
+$('setDone').onclick=()=>{if(MODE==='sm'&&!CFG.me){fail('先填一下进展落款');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
 $('me').value=CFG.me;$('intern').checked=CFG.intern;
-$('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
+$('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();renderPend();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
 $('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
 $('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toast('已重新读取')};
 document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
