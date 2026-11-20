@@ -116,13 +116,16 @@ const CLOSE=[
 
 const PLATS=[[/facebook|fb\.com|fb\.watch/i,'Facebook'],[/douyin|抖音/i,'抖音'],[/xiaohongshu|xhslink|小红书/i,'小红书'],[/bilibili|b23\.tv|B站|哔哩/i,'B站'],[/weibo|微博/i,'微博'],[/reddit/i,'Reddit'],[/youtube|youtu\.be/i,'YouTube'],[/instagram/i,'Instagram'],[/tiktok/i,'TikTok'],[/twitter|\/\/x\.com/i,'X'],[/weixin|微信|视频号/i,'微信']];
 const platOf=c=>{const s=((c.o&&c.o.plat)||'')+' '+((c.o&&c.o.link)||'')+' '+((c.v&&c.v.s_link)||'');for(const[rx,n]of PLATS)if(rx.test(s))return n;return (c.o&&c.o.plat)||'其他'};
-const ACC_SEED={Facebook:['Support号','个人号']};
+const WX_ACC=['小影技术君','影石技术拍档小耀','影石技术拍档小意','用户运营个人'];
+const FORM_ACC={'小红书':['小红书具体账号',['影石Insta360技术君','小影技术君','小影技术君（启航版）','小影技术君（航海版）','其他']],'企业微信群':['企业微信具体账号',WX_ACC],'企业微信个人':['企业微信具体账号',WX_ACC]};
+const formAcc=c=>FORM_ACC[(c.o&&c.o.plat||'').trim()]||null;
+const ACC_SEED={Facebook:['Support号','个人号'],'小红书':FORM_ACC['小红书'][1].filter(x=>x!=='其他'),'企业微信群':WX_ACC,'企业微信个人':WX_ACC};
 const accList=p=>[...new Set([...((CFG.accs&&CFG.accs[p])||[]),...(ACC_SEED[p]||['官方号','个人号'])])];
 const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-bottom:6px"><span class="hint" style="align-self:center">${esc(p)}回复账号：</span>${accList(p).map(a=>`<button data-acc="${esc(a)}" class="${L.acc===a?'on':''}">${esc(a)}</button>`).join('')}</div>`};
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.12';
+const VER='1.13';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -212,7 +215,8 @@ const noteText=c=>{const L=c.L,p=[];if(L.acc)p.push(L.acc+(L.acts.includes('已�
 function formUrl(c){
   const fp=formPri(c.L.pri);
   const val={user:c.o.user,type:c.o.type,plat:c.o.plat,time:c.o.time,link:c.o.link,desc:c.desc,pri:fp,fan:fanBucket(c.fans)||c.o.fan};
-  return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&');
+  const fa=formAcc(c);
+  return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&')+(fa&&c.L.facc&&fa[1].includes(c.L.facc)?'&prefill_'+encodeURIComponent(fa[0])+'='+encodeURIComponent(c.L.facc):'');
 }
 const priOpts=()=>{const o=F.pri&&(F.pri.type===FieldType.SingleSelect||F.pri.type===FieldType.MultiSelect)?(F.pri.property?.options||[]).map(o=>o.name):[];const b=o.length?o:['P0','P1','P2','P3','无需回复'];const v=(cur&&cur.v.pri||'').trim();return v&&!b.includes(v)?[v,...b]:b};
 const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property?.options||[]).map(o=>o.name):[];
@@ -220,7 +224,7 @@ const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property
 function render(){
   if(cur&&cur.sm)return renderSM();
   const c=cur;if(!c)return;const L=c.L,v=c.v;
-  const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复',noLog=blocked||noRec;
+  const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复',noLog=blocked||noRec,fa=formAcc(c);
   const qbPri=(v.pri||'').trim(),sp=qbPri?'':(L.ai&&L.ai.pri)||sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
   const fl=fanBucket(c.fans)||c.o.fan||'';
   const taken=v.handler&&v.handler.trim();
@@ -250,9 +254,10 @@ function render(){
 
   <div class="card"><h2><span class="n">3</span>录单</h2>
    ${blocked||noRec?'<p class="hint">这条不录单。</p>':`
+   ${fa?`<p class="hint" style="margin:0 0 4px">这个平台的表单要选「${esc(fa[0])}」，先点一个，会一起预填：</p><div class="seg" style="margin-bottom:8px">${fa[1].map(a=>`<button data-facc="${esc(a)}" class="${L.facc===a?'on':(L.facc?'':'sug')}">${esc(a)}</button>`).join('')}</div>`:''}
    <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
    <ol class="hint" style="padding-left:18px;margin:8px 0 0;line-height:1.8">
-    <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}已填好${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
+    <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}${fa&&L.facc?'、'+esc(fa[0]):''}已填好${fa&&!L.facc?'（<b>'+esc(fa[0])+'还没选，先点上面</b>）':''}${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
     <li>截图：打开原帖，按 ⌘+Ctrl+Shift+4 框选帖子，回表单点截图框按 ⌘V</li>
     <li>产品型号：点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
     <li>提交表单，把社媒单号填到下面，再点第 4 步「回写」</li>
@@ -386,6 +391,7 @@ document.addEventListener('click',async e=>{
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
+  else if(t.dataset.facc){const a=t.dataset.facc;L.facc=L.facc===a?'':a;if(L.facc&&L.facc!=='其他')L.acc=L.facc;saveLocal();render()}
   else if(t.dataset.acc){L.acc=L.acc===t.dataset.acc?'':t.dataset.acc;saveLocal();render()}
   else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;saveLocal();render()}
   else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
