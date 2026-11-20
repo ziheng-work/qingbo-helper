@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.20';
+const VER='1.21';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -160,7 +160,7 @@ const AI={base:'https://ai-gateway.insta360.cn/v1',key:'',model:''};
 try{Object.assign(AI,JSON.parse(localStorage.getItem('qbai')||'{}'))}catch(e){}
 const saveAi=()=>{try{localStorage.setItem('qbai',JSON.stringify(AI))}catch(e){}};
 let BR=false,BRV='',BRID=0;const BRW={};
-window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=BRV<'1.1';el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新后表单能自动选型号）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}});
+window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=BRV<'1.2';el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新到 1.2 后表单能自动选型号、放截图）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}});
 async function bfetch(url,opt){
   if(BR)return new Promise((ok,no)=>{const id=++BRID;BRW[id]=r=>ok(r);window.postMessage({type:'QB_BRIDGE_REQ',id,url,method:opt.method,headers:opt.headers,body:opt.body},location.origin);setTimeout(()=>{if(BRW[id]){delete BRW[id];no(new Error('桥接扩展没响应'))}},90000)});
   try{const r=await fetch(url,opt);return{ok:r.ok,status:r.status,text:await r.text()}}catch(e){throw new Error('连不上 AI：没装桥接扩展，浏览器拦截了跨域请求')}
@@ -219,11 +219,12 @@ async function loadRecord(rid){
 }
 
 const noteText=c=>{const L=c.L,p=[];if(L.acc)p.push(L.acc+(L.acts.includes('已评论回复')?'回复':''));p.push(...L.acts.filter(a=>!(L.acc&&a==='已评论回复')));if(L.wait&&L.wait!=='无需等待')p.push(L.wait);if(L.extra)p.push(L.extra);return today()+' '+(CFG.me||'我')+'：'+p.join('，')};
+function qbHash(c){const p=[];if(c.L.models.length)p.push('qb_models='+encodeURIComponent(c.L.models.join('|')));const u=(c.shots||[]).map(x=>x.url).filter(Boolean);if(u.length)p.push('qb_shot='+encodeURIComponent(u.join('|')));return p.length?'#'+p.join('&'):''}
 function formUrl(c){
   const fp=formPri(c.L.pri);
   const val={user:c.o.user,type:c.o.type,plat:c.o.plat,time:c.o.time,link:c.o.link,desc:c.desc,pri:fp,fan:fanBucket(c.fans)||c.o.fan};
   const fa=formAcc(c);
-  return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&')+(fa&&c.L.facc&&fa[1].includes(c.L.facc)?'&prefill_'+encodeURIComponent(fa[0])+'='+encodeURIComponent(c.L.facc):'')+(c.L.models.length?'#qb_models='+encodeURIComponent(c.L.models.join('|')):'');
+  return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&')+(fa&&c.L.facc&&fa[1].includes(c.L.facc)?'&prefill_'+encodeURIComponent(fa[0])+'='+encodeURIComponent(c.L.facc):'')+qbHash(c);
 }
 const priOpts=()=>{const o=F.pri&&(F.pri.type===FieldType.SingleSelect||F.pri.type===FieldType.MultiSelect)?(F.pri.property?.options||[]).map(o=>o.name):[];const b=o.length?o:['P0','P1','P2','P3','无需回复'];const v=(cur&&cur.v.pri||'').trim();return v&&!b.includes(v)?[v,...b]:b};
 const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property?.options||[]).map(o=>o.name):[];
@@ -266,7 +267,7 @@ function render(){
    <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
    <ol class="hint" style="padding-left:18px;margin:8px 0 0;line-height:1.8">
     <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}${fa&&L.facc?'、'+esc(fa[0]):''}已填好${fa&&!L.facc?'（<b>'+esc(fa[0])+'还没选，先点上面</b>）':''}${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
-    <li>截图：打开原帖，按 ⌘+Ctrl+Shift+4 框选帖子，回表单点截图框按 ⌘V</li>
+    <li>截图：${c.shots&&c.shots.length?(BRV>='1.2'?'扩展会把清博里的帖子截图<b>自动放进</b>「原帖截图」':'清博有截图，桥接扩展更新到 1.2 后会自动放进表单；现在先点上面的截图缩略图另存，再拖进表单'):'清博这条<b>没有截图</b>，要自己截：打开原帖，按 ⌘+Ctrl+Shift+4 框选，回表单点截图框按 ⌘V'}</li>
     <li>产品型号：${BRV>='1.1'?'打开表单后扩展会<b>自动选上</b>'+(L.models.length?'「'+esc(L.models.join('、'))+'」':'')+'，右下角有绿色提示；没选上再':'（桥接扩展更新到 1.1 后会自动选）现在先'}点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
     <li>提交表单，把社媒单号填到下面，再点第 4 步「回写」</li>
    </ol>
