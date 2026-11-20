@@ -88,7 +88,7 @@ POST /tickets/{no}/terminate {reason}
   <div id="pend"></div>
   <div id="main"><div class="card empty">在表格里点选一行（任意单元格）。清博表里显示录单面板，社媒帖处理系统里显示进展和关单面板。</div></div>
 </div>
-<p class="hint" style="text-align:center;margin:4px 0 12px">开发：曾子恒 Ziheng Zeng</p>
+<p class="hint" style="text-align:center;margin:4px 0 12px"><a href="https://ziheng-work.github.io/qingbo-helper/guide.html" target="_blank" rel="noopener">使用教程（图示）</a>　·　开发：曾子恒 Ziheng Zeng</p>
 <div class="toast" id="toast"></div>
 <script src="sdk.js"></script>
 <script>
@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.16';
+const VER='1.17';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};

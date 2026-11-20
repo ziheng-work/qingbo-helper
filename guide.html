@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>录单助手 · 使用教程</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1f2329;--mute:#646a73;--line:#dee0e3;--blue:#3370ff;--red:#e8321e;--ok:#2ea121;--warn:#f5a623}
+@media(prefers-color-scheme:dark){:root{--bg:#17181a;--card:#222326;--ink:#e8e9eb;--mute:#9aa0a8;--line:#3a3c40}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 18px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:21px;margin:44px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h2 small{font-weight:400;color:var(--mute);font-size:14px;margin-left:8px}
+p{margin:8px 0}
+.lead{color:var(--mute)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.toc a{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 14px;color:var(--ink);text-decoration:none;font-size:14px}
+.step{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start;margin:22px 0}
+@media(max-width:760px){.step{grid-template-columns:1fr}}
+.step h3{margin:0 0 4px;font-size:17px}
+.num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;margin-right:8px;vertical-align:2px}
+ol,ul{padding-left:22px;margin:6px 0}
+li{margin:3px 0}
+code{background:color-mix(in srgb,var(--ink) 8%,transparent);padding:1px 6px;border-radius:4px;font-size:14px;word-break:break-all}
+.url{display:block;background:var(--card);border:1px dashed var(--blue);border-radius:8px;padding:10px 12px;margin:8px 0;font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all}
+.tip{border-left:3px solid var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--card));padding:8px 12px;border-radius:5px;margin:10px 0;font-size:15px}
+.warn{border-left:3px solid var(--red);background:color-mix(in srgb,var(--red) 10%,var(--card));padding:8px 12px;border-radius:5px;margin:10px 0;font-size:15px}
+/* 图示：仿插件面板 */
+.fig{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;line-height:1.5;position:relative}
+.fig .cap{position:absolute;top:-10px;left:12px;background:var(--ink);color:var(--bg);font-size:11px;padding:1px 8px;border-radius:999px}
+.bar{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.bar .sp{flex:1}
+.ico{width:22px;height:22px;border:1.5px solid var(--mute);border-radius:5px;display:inline-grid;place-items:center;font-size:12px;color:var(--mute)}
+.ico.hit{border-color:var(--red);color:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 25%,transparent)}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
+.pc b.t{display:block;font-size:14px;margin-bottom:6px}
+.pc .n{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;margin-right:6px}
+.kv{display:grid;grid-template-columns:52px 1fr;gap:2px 8px;color:var(--mute)}
+.kv span:nth-child(even){color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}
+.chip{border:1px solid var(--line);border-radius:6px;padding:2px 9px;background:var(--card);font-weight:600}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.sug{border:2px dashed var(--red)}
+.btn{display:inline-block;border-radius:6px;padding:5px 12px;font-weight:700;border:1px solid var(--line);background:var(--card)}
+.btn.blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.red{background:var(--red);color:#fff;border-color:var(--red);display:block;text-align:center}
+.inp{border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--mute);background:var(--card);margin:4px 0}
+.okb{background:color-mix(in srgb,var(--ok) 12%,var(--card));border-left:3px solid var(--ok);padding:6px 8px;border-radius:4px;margin:4px 0}
+.out{background:color-mix(in srgb,var(--ink) 7%,transparent);border-radius:6px;padding:6px 8px;margin:4px 0}
+.ck{display:block}.ck::before{content:"☑ ";color:var(--blue)}.ck.off::before{content:"☐ ";color:var(--mute)}
+.pill{display:inline-block;background:var(--ok);color:#fff;border-radius:999px;padding:0 8px;font-size:11px;font-weight:700}
+.arrow{color:var(--red);font-weight:700}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:14px 0}
+.flow div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600}
+.flow i{color:var(--mute);font-style:normal}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:8px 0}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+footer{margin-top:50px;color:var(--mute);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<main>
+<h1>录单助手 · 使用教程</h1>
+<p class="lead">飞书多维表格里的一个侧边栏插件。在清博表里点一行帖子，它帮你判断优先级和型号、预填录单表单、回写清博；再到社媒帖处理系统点一下，把进展和关单原因写进工单。</p>
+<div class="toc"><a href="#a">一、装插件</a><a href="#b">二、首次设置</a><a href="#c">三、在清博表录单</a><a href="#d">四、在社媒系统写进展</a><a href="#e">五、哪些要自己做</a><a href="#f">六、常见问题</a></div>
+
+<div class="flow"><div>清博表点一行</div><i>→</i><div>打标</div><i>→</i><div>开预填表单提交</div><i>→</i><div>回写清博</div><i>→</i><div>社媒系统点「全部写入」</div></div>
+
+<h2 id="a">一、装插件<small>每人做一次，约 1 分钟</small></h2>
+<div class="step">
+ <div>
+  <h3><span class="num">1</span>打开插件入口</h3>
+  <ol>
+   <li>打开清博表「影石&amp;清博推送」。</li>
+   <li>点右上角「分享」右边的<b>拼图图标</b>。</li>
+   <li>在弹出的面板最下面点<b>「自定义插件」</b>。</li>
+   <li>点右上角<b>「新增插件」</b>。</li>
+  </ol>
+  <h3 style="margin-top:14px"><span class="num">2</span>填名称和地址</h3>
+  <p>名称随便填（建议「录单助手」），服务地址粘贴这一串，点确定：</p>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=17</span>
+  <p class="tip">插件是跟着你的飞书账号走的。在清博表装一次，社媒帖处理系统里也会有，不用装两遍。之后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：入口在这里</span>
+  <div class="bar"><span>影石&amp;清博推送</span><span class="sp"></span><span class="btn blue" style="padding:2px 10px">分享</span><span class="ico hit" title="拼图">✚</span><span class="ico">🔔</span></div>
+  <div class="pc"><b class="t">插件</b><div style="color:var(--mute)">最近使用 …</div><div style="margin-top:8px;text-align:right"><span class="arrow">点这里 →</span> <span class="btn">自定义插件</span></div></div>
+  <div class="pc"><b class="t">新增插件</b><div>插件名称</div><div class="inp">录单助手</div><div>服务地址</div><div class="inp">https://ziheng-work.github.io/…</div><div style="text-align:right"><span class="btn blue">确定</span></div></div>
+ </div>
+</div>
+
+<h2 id="b">二、首次设置<small>面板会自动展开，三步</small></h2>
+<div class="step">
+ <div>
+  <h3><span class="num">1</span>你的名字</h3>
+  <p>填你平时在社媒系统「当前进展」里的落款，名字或缩写都行。插件生成的进展会是「11.20 你的名字：已评论回复」这种格式。</p>
+  <h3 style="margin-top:14px"><span class="num">2</span>装桥接扩展<small style="font-weight:400;color:var(--mute)">（要用 AI 判断才需要）</small></h3>
+  <ol>
+   <li>点面板里的「下载扩展」，把下载的压缩包解压。</li>
+   <li>Chrome 地址栏输入 <code>chrome://extensions</code> 回车。</li>
+   <li>打开右上角「开发者模式」。</li>
+   <li>点「加载未打包的扩展程序」，选刚解压出的文件夹。</li>
+   <li>回到飞书刷新页面，面板里显示「桥接扩展：已安装」。</li>
+  </ol>
+  <h3 style="margin-top:14px"><span class="num">3</span>AI Key</h3>
+  <p>到公司 AI 网关（ai-gateway.insta360.cn）自己建一个 Key，粘进去点「连接」，显示「已就绪」就行。Key 只存在你自己的浏览器里。</p>
+  <p>三项弄完点<b>「设置好了，收起」</b>。</p>
+  <p class="tip">不想用 AI 也可以，只做第 1 步。那样优先级、型号、简述要自己选和写，其余功能照常。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：首次设置</span>
+  <div class="pc"><b class="t">▼ 设置</b>
+   <div><b>① 你的名字</b></div><div class="inp">名字或缩写</div>
+   <div><b>② 装桥接扩展</b></div><div><span class="pill">桥接扩展：已安装</span> <u>下载扩展</u></div>
+   <div style="margin-top:6px"><b>③ AI Key</b></div><div class="inp">••••••••••••••••</div>
+   <div><span class="inp" style="display:inline-block">claude-haiku-4-5 ▾</span> <span class="btn">连接</span></div>
+   <div class="okb">已就绪</div>
+   <span class="btn blue" style="display:block;text-align:center">设置好了，收起</span>
+  </div>
+ </div>
+</div>
+
+<h2 id="c">三、在清博表录单<small>每条帖子走一遍 ①–⑤</small></h2>
+
+<div class="step">
+ <div>
+  <h3><span class="num">①</span>点一行，看帖子</h3>
+  <p>在清博表里点你要处理的那条帖子的任意一格，面板会读出用户名、渠道、时间、粉丝档位和帖子简述。</p>
+  <p>简述可以直接改，要写清具体问题。点「打开原帖」去截图。</p>
+  <p class="warn">面板出现红色提示「这条已经有社媒处理人」时，说明同事在处理，别重复录单。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：① 帖子</span>
+  <div class="pc"><b class="t"><span class="n">1</span>帖子</b>
+   <div class="kv"><span>用户名</span><span>用户A</span><span>渠道</span><span>小红书 · 发帖</span><span>时间</span><span>2026/11/19 21:53</span><span>粉丝</span><span>10　粉丝量&lt;300</span></div>
+   <div class="inp" style="color:var(--ink)">相机连上手机后照片不显示…</div><u>打开原帖 ↗</u>
+  </div>
+ </div>
+</div>
+
+<div class="step">
+ <div>
+  <h3><span class="num">②</span>打标：优先级 + 产品型号</h3>
+  <ul>
+   <li>清博已经分好级的，插件直接沿用，并提示「优先按这个」。</li>
+   <li>AI 会自动给出优先级、型号和一句简述，觉得对就点「用这个简述」。</li>
+   <li>要改就自己点优先级按钮；型号点虚线框的建议项，或在输入框里搜。</li>
+  </ul>
+  <p class="tip">要转 FAE 的单，型号别选「Studio-不确定」这类，选具体系统，否则同步 CRM 会失败。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：② 打标</span>
+  <div class="pc"><b class="t"><span class="n">2</span>打标</b>
+   <div style="color:var(--mute)">优先级 · 清博已分级「P2」（优先按这个）</div>
+   <div class="okb">AI：P2 · GO Ultra<br>连接手机后相册不显示照片　<u>用这个简述</u></div>
+   <div class="chips"><span class="chip">P0</span><span class="chip">P1</span><span class="chip on">P2</span><span class="chip">P2技术</span><span class="chip">P3</span><span class="chip">无需回复</span></div>
+   <div style="color:var(--mute)">产品型号</div>
+   <div class="chips"><span class="chip on">GO Ultra ×</span><span class="chip" style="border-style:dashed">+ Insta360 APP-安卓</span></div>
+  </div>
+ </div>
+</div>
+
+<div class="step">
+ <div>
+  <h3><span class="num">③</span>录单：开预填表单</h3>
+  <ol>
+   <li>小红书、企业微信的帖子，先在上面点选<b>具体账号</b>（表单必填，点了会一起预填）。</li>
+   <li>点<b>「打开预填表单」</b>。用户名、渠道、时间、链接、简述、优先级、粉丝档位都已经填好。</li>
+   <li><b>截图要自己贴</b>：在原帖按 <code>⌘+Ctrl+Shift+4</code> 框选帖子，回表单点截图框按 <code>⌘V</code>。</li>
+   <li><b>型号要自己选</b>：点「复制型号」，到表单的产品型号框里搜出来选上。</li>
+   <li>检查一遍，提交表单。</li>
+  </ol>
+ </div>
+ <div class="fig"><span class="cap">图示：③ 录单</span>
+  <div class="pc"><b class="t"><span class="n">3</span>录单</b>
+   <div style="color:var(--mute)">这个平台的表单要选「小红书具体账号」，先点一个：</div>
+   <div class="chips"><span class="chip sug">影石Insta360技术君</span><span class="chip on">小影技术君</span><span class="chip sug">其他</span></div>
+   <span class="btn blue">打开预填表单 ↗</span> <span class="btn">复制型号</span>
+   <div style="color:var(--mute);margin-top:6px">1. 已填好：用户名、渠道、时间、链接、简述…<br>2. 截图：⌘V 贴进表单<br>3. 型号：复制后在表单里搜<br>4. 提交</div>
+   <div class="inp">社媒单号（可不填）</div>
+  </div>
+ </div>
+</div>
+
+<div class="step">
+ <div>
+  <h3><span class="num">④</span>回写清博</h3>
+  <p>把结果写回你选中的这一行，让同事知道这条有人处理了。勾着的项才会写：</p>
+  <table>
+   <tr><th>项</th><th>写成什么</th></tr>
+   <tr><td>是否已登记</td><td>是</td></tr>
+   <tr><td>优先级</td><td>你选的优先级；和清博原来的一样就不动</td></tr>
+   <tr><td>回复日期</td><td>今天</td></tr>
+   <tr><td>社媒处理人</td><td>你自己</td></tr>
+   <tr><td>处理进展</td><td>下拉里选，默认「已录单」</td></tr>
+   <tr><td>备注（默认不勾）</td><td>在原备注后面加一句「社媒单号 xxx」</td></tr>
+  </table>
+  <p>红色按钮要<b>连点两次</b>才写入，防误触。</p>
+  <p class="warn">只写你选中的这一行。点之前确认选的是你自己在处理的帖子。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：④ 回写</span>
+  <div class="pc"><b class="t"><span class="n">4</span>回写清博（只写这一行）</b>
+   <span class="ck">是否已登记 → 是</span>
+   <span style="color:var(--mute)">优先级：清博已是「P2」，不改</span>
+   <span class="ck">回复日期 → 今天</span>
+   <span class="ck">社媒处理人 → 我</span>
+   <span class="ck">处理进展 → 已录单 ▾</span>
+   <span class="ck off">备注 → 追加「社媒单号 …」</span>
+   <span class="btn red" style="margin-top:6px">回写到这一行</span>
+  </div>
+ </div>
+</div>
+
+<div class="step">
+ <div>
+  <h3><span class="num">⑤</span>填进展和关单情况</h3>
+  <ul>
+   <li><b>回复账号</b>：点一个，没有就手填（会按平台记住）。</li>
+   <li><b>做了什么</b>：已评论回复、已私信、已发话题问FAE… 可以多选。</li>
+   <li><b>在等什么</b>、<b>补充</b>：用了哪篇知识库、网盘链接、和谁确认过。</li>
+   <li><b>关单向导</b>：点一个符合现在情况的，插件告诉你能不能关、关单原因选哪个。</li>
+  </ul>
+  <p>这里只是先填好，下一步到社媒系统一键写进工单。也可以点「复制进展」自己粘。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：⑤ 进展 · 关单</span>
+  <div class="pc"><b class="t"><span class="n">5</span>社媒系统：进展 · 关单</b>
+   <div class="chips"><span style="color:var(--mute)">小红书回复账号：</span><span class="chip on">小影技术君</span></div>
+   <div class="chips"><span class="chip on">已评论回复</span><span class="chip">已私信</span><span class="chip">已转FAE</span></div>
+   <div class="out">11.20 你的名字：小影技术君回复，蹲用户回复</div>
+   <div style="color:var(--mute)">现在是什么情况？点一个：</div>
+   <div class="chip on" style="display:block;margin:3px 0">首回即解决（用法咨询已答清楚）</div>
+   <div class="chip" style="display:block;margin:3px 0">还在等用户补资料 / 等 FAE</div>
+   <div class="okb"><b>可以关单</b><br>关单原因：已远程协助用户解决</div>
+  </div>
+ </div>
+</div>
+
+<h2 id="d">四、在社媒系统写进展<small>攒几条一起写也行</small></h2>
+<div class="step">
+ <div>
+  <ol>
+   <li>打开社媒帖处理系统，切到<b>「社媒支持（当日）」</b>视图。</li>
+   <li>点拼图图标 → 自定义插件 → 录单助手。</li>
+   <li>面板顶上「从清博带过来的」会列出你刚才处理的帖子。</li>
+   <li>点<b>「全部写进社媒系统」</b>，再点一次确认。插件按帖子链接自己找到每张工单，写入当前进展；选了关单情况的，顺带写关单原因和用户是否回复。</li>
+   <li>每条后面显示 ✓ 或 ✕。✕ 会写原因，最常见的是表单刚提交、系统还没建好单，等一会儿再点。</li>
+  </ol>
+  <p class="tip">只有在清博表点过第 ④ 步「回写」（或填了社媒单号）的帖子才会出现在这里，随手点过的不会。</p>
+  <p>想单独处理某张单：在「按单号找单」里填单号点「打开」，或直接在表里点那一行，面板会显示这张单，可以单独写进展和关单原因。</p>
+ </div>
+ <div class="fig"><span class="cap">图示：社媒系统里的面板</span>
+  <div class="pc"><b class="t">从清博带过来的（2）</b>
+   <div class="out"><b>用户A</b> 按帖子链接找单<br>11.20 你的名字：小影技术君回复，蹲用户回复</div>
+   <div class="out"><b>用户B</b> 按帖子链接找单<br>11.20 你的名字：官方号回复<br><b>✓ 进展、关单原因、用户是否回复</b></div>
+   <span class="btn red">全部写进社媒系统</span>
+   <div style="display:flex;gap:6px;margin-top:6px"><div class="inp" style="flex:1;margin:0">按单号找单</div><span class="btn">打开</span></div>
+  </div>
+ </div>
+</div>
+
+<h2 id="e">五、哪些要自己做</h2>
+<table>
+ <tr><th>事情</th><th>为什么插件做不了</th></tr>
+ <tr><td>表单里贴原帖截图</td><td>飞书表单的附件不能用链接预填</td></tr>
+ <tr><td>表单里选产品型号</td><td>这个字段不支持预填，插件只能帮你复制好</td></tr>
+ <tr><td>点「提交」</td><td>提交前需要人检查一遍</td></tr>
+ <tr><td>流程里「待首回」「待关单」的完成节点</td><td>流程按钮不对插件开放。回复实际发出后再点首回</td></tr>
+ <tr><td>企业微信群的「具体群」</td><td>目前没预填，表单里手选</td></tr>
+</table>
+
+<h2 id="f">六、常见问题</h2>
+<table>
+ <tr><th>现象</th><th>怎么办</th></tr>
+ <tr><td>面板还是旧版本</td><td>面板右上「…」→ 编辑，把地址末尾的 <code>?v=</code> 数字改成最新的</td></tr>
+ <tr><td>显示「这张表不认识」</td><td>插件只认清博表和社媒帖处理系统总表。换到这两张表的数据视图再打开</td></tr>
+ <tr><td>AI 一直连不上</td><td>检查桥接扩展是否「已安装」、Key 是否有效；公司电脑如果禁了开发者模式，就不用 AI，手动打标</td></tr>
+ <tr><td>社媒系统写入失败、字段是灰的</td><td>先把自己加进这张单「待首回」节点的分配人员</td></tr>
+ <tr><td>「全部写入」提示没找到单</td><td>切到「社媒支持（当日）」视图；表单刚提交要等系统建好单再点</td></tr>
+ <tr><td>出现红色「出错了」</td><td>把那句话截图发给开发人</td></tr>
+</table>
+
+<footer>录单助手 · 开发：曾子恒 Ziheng Zeng　　图示为示意，数据均为虚构</footer>
+</main>
+</body>
+</html>
