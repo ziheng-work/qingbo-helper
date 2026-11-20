@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.14';
+const VER='1.15';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -313,7 +313,7 @@ async function loadSM(rid){
   if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,from:q?1:0};saveLocal()}
   cur={rid,v,L:LOCAL[key],sm:1};renderSM();
 }
-const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||L.link)&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
+const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||(L.link&&L.wbDone))&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
 async function findTicket(no,link){
   const conds=[];
   if(no&&F.s_case)conds.push({fieldId:F.s_case.id,operator:'is',value:no});
@@ -327,12 +327,12 @@ const reloadLocal=()=>{if(MODE!=='sm'||PEND.run)return;try{const n=JSON.parse(lo
 window.addEventListener('storage',e=>{if(e.key==='qblocal')reloadLocal()});window.addEventListener('focus',reloadLocal);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reloadLocal()});
 function renderPend(){
   const el=$('pend');if(!el)return;if(MODE!=='sm'){el.innerHTML='';return}
-  const ps=pendings();
+  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
   el.innerHTML=`<div class="card"><h2>从清博带过来的（${ps.length}）</h2>
    ${ps.length?`<p class="hint" style="margin-top:0">你在清博表里填好进展的帖子。点一下，插件自己找到对应工单，把「当前进展」写进去${ps.some(([,L])=>L.close!=null&&CLOSE[L.close].act)?'，选了关单情况的顺便写「关单原因」和「用户是否回复」':''}。</p>
    ${ps.map(([k,L])=>`<div class="out" style="margin-bottom:4px;font-size:12px"><b>${esc(L.user||'（无用户名）')}</b> ${esc(L.ticket||'按帖子链接找单')}<br>${esc(noteText({L}))}${PEND.msg[k]?'<br><b>'+esc(PEND.msg[k])+'</b>':''}</div>`).join('')}
-   <button class="danger" id="pendGo" style="width:100%" ${PEND.run?'disabled':''}>${PEND.run?'写入中…':PEND.arm?'再点一次确认写入':'全部写进社媒系统'}</button>`:'<p class="hint" style="margin:0">没有待写入的。在清博表录单时把第 ⑤ 步填好，这里就会出现。</p>'}
-   <div class="row" style="margin-top:8px"><input id="findNo" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
+   <button class="danger" id="pendGo" style="width:100%" ${PEND.run?'disabled':''}>${PEND.run?'写入中…':PEND.arm?'再点一次确认写入':'全部写进社媒系统'}</button>`:'<p class="hint" style="margin:0">没有待写入的。在清博表把第 ⑤ 步填好并点过第 ④ 步「回写」（或填了社媒单号）的帖子，会出现在这里。</p>'}
+   <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
   </div>`;
 }
 async function syncAll(){
@@ -421,13 +421,14 @@ async function writeBack(){
   if(F.prog&&wOn(L,'prog',!noLog)&&L.progSel)plan.push([F.prog,L.progSel]);
   if(F.note&&L.w_note===true&&L.ticket)plan.push([F.note,((c.v.note?c.v.note+' ':'')+'社媒单号 '+L.ticket)]);
   for(const[f,val]of plan){try{await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
+  if(done.length){L.wbDone=Date.now();saveLocal()}
   toast(done.length?'已写：'+done.join('、'):'没有写入');
   if(err.length)fail(err.join('；'));
   await loadRecord(c.rid);
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no)return;try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no);return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no);return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
