@@ -49,8 +49,8 @@ details summary{cursor:pointer;font-weight:600}
   <details class="card" id="setBox">
     <summary>设置</summary>
     <div style="display:grid;gap:8px;margin-top:8px">
-      <div class="ok" id="firstTip" style="display:none;margin:0">第一次用，三步就好：① 填署名 ② 装桥接扩展 ③ 粘 Key 点「连接」。不用 AI 的话只做第 ① 步也行。</div>
-      <label><b style="font-size:13px;color:var(--ink)">① 进展署名</b>（写进展时用，如「11.20 子恒：…」）<input id="me" placeholder="如：子恒"></label>
+      <div class="ok" id="firstTip" style="display:none;margin:0">第一次用，三步就好：① 填你的名字 ② 装桥接扩展 ③ 粘 Key 点「连接」。不用 AI 的话只做第 ① 步也行。</div>
+      <label><b style="font-size:13px;color:var(--ink)">① 你的名字</b>（社媒系统「当前进展」里你平时怎么落款就填什么，名字或缩写都行。填「子恒」，生成的进展就是「11.20 子恒：已评论回复」）<input id="me" placeholder="如：子恒、ft"></label>
       <b style="font-size:13px">② 装桥接扩展</b>
       <p class="hint" style="margin:0">AI 判断（自动给优先级、型号、简述）要用它。下载并解压 → Chrome 地址栏打开 chrome://extensions → 打开右上角「开发者模式」→ 点「加载未打包的扩展程序」选解压出的文件夹 → 回来刷新本页。</p>
       <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
@@ -115,7 +115,7 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.7';
+const VER='1.8';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -411,7 +411,7 @@ document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&
 $('ver').textContent='v'+VER;
 $('autoAi').checked=CFG.autoAi!==false;$('autoAi').onchange=e=>{CFG.autoAi=e.target.checked;saveCfg()};
 if(!CFG.done){$('setBox').open=true;$('firstTip').style.display=''}
-$('setDone').onclick=()=>{if(!CFG.me){fail('先填一下进展署名');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
+$('setDone').onclick=()=>{if(!CFG.me){fail('先填一下你的名字（第 ① 步）');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
 $('me').value=CFG.me;$('intern').checked=CFG.intern;
 $('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
 $('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
