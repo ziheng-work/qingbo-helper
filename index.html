@@ -94,8 +94,8 @@ POST /tickets/{no}/terminate {reason}
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',qshot:'帖子截图',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
-const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',qshot:'清博·帖子截图',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',qshot:'帖子截图',reply:'回复内容',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
+const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',qshot:'清博·帖子截图',reply:'清博·回复内容（有就给 AI 参考）',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
 const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.32';
+const VER='1.33';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -185,6 +185,25 @@ async function aiJudge(c){
   const o=JSON.parse(m[0]);o.models=(o.models||[]).filter(x=>MODELS.includes(x));return o;
 }
 
+const isP2Tech=p=>/^P2\s*技术/.test(p||'');
+async function aiClose(c){
+  const L=c.L;
+  if(isP2Tech(L.pri))return{close:9,why:'P2 技术问题按规则不关单'};
+  const sys='你是 Insta360（影石）社媒客服的关单助手。客服已经在帖子下回复了用户。根据帖子内容（和客服回复，如果有）判断这张工单现在该不该关、关单原因选哪个。只输出严格 JSON：{"close":数字,"why":"一句中文理由"}。close 只能取：0=用法/咨询类问题，回复已答清楚（关单原因：已远程协助用户解决）；2=用户要的效果产品做不到或暂不支持，如夜景/画质模糊等硬件局限（产品局限，暂无解）；3=功能需求或建议，如自定义水印、LUT、某系统适配（已反馈需求）；4=摔坏、进水、硬件损坏需要维修（已引导寄回）；5=资料齐全、需要转在线客服或邮件处理的售后/订单问题（已转交在线/邮件处理）；8=不关单：还需要用户补充信息（机型、版本、截图、LogID、原片）或在等 FAE 答复，问题没有定论；9=不关单：故障类技术问题（连接、报错、闪退、固件、导出失败等）还没确认解决。拿不准时选 8。';
+  const user='优先级：'+(L.pri||'')+'\n产品型号：'+L.models.join('、')+'\n平台：'+(c.o.plat||'')+'\n帖子：'+(c.v.title||'')+'\n'+(c.desc||'')+((c.v.reply||'').trim()?'\n客服回复：'+c.v.reply:'');
+  const j=await aiCall('/chat/completions',{model:AI.model,temperature:0,messages:[{role:'system',content:sys},{role:'user',content:user}]});
+  const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+  const m=t.match(/\{[\s\S]*\}/);if(!m)throw new Error('AI 返回格式不对');
+  const o=JSON.parse(m[0]);o.close=+o.close;if(![0,2,3,4,5,8,9].includes(o.close))o.close=8;return o;
+}
+async function autoClose(c){
+  const L=c.L;if(L.closeTouched||L.close!=null)return;
+  if(!isP2Tech(L.pri)&&!aiReady())return;
+  const fp=formPri(L.pri);if(!fp||fp==='无需回复')return;
+  const o=await aiClose(c);L.close=o.close;L.closeAi=o.why||'';
+  if(o.close===8&&!L.wait)L.wait='蹲用户回复';
+}
+const closeTxt=L=>{if(L.close==null)return '';const cl=CLOSE[L.close];return (cl.act?'关单：'+cl.r:'不关单')+(L.closeAi&&!L.closeTouched?'（AI：'+L.closeAi+'）':'')};
 let table=null,metas=[],F={},cur=null,userId='',busy=false,confirmShot=0;
 
 function findField(name){if(!name)return null;const n=name.trim();return metas.find(m=>m.name===n)||metas.find(m=>m.name.startsWith(n+'/')||m.name.startsWith(n+' /'))||metas.find(m=>m.name.startsWith(n))||metas.find(m=>m.name.includes(n))||null}
@@ -303,7 +322,7 @@ function render(){
    <div class="out" id="note">${esc(noteText(c))}</div>
    <button data-copy="note">复制进展</button>
    <h3>关单向导</h3>
-   <p class="hint" style="margin:0 0 4px">现在是什么情况？点一个：</p>${closeList(L)}
+   <p class="hint" style="margin:0 0 4px">现在是什么情况？点一个：</p>${L.closeAi&&!L.closeTouched?'<p class="hint" style="margin:0 0 4px;color:var(--blue)">AI 已选：'+esc(L.closeAi)+'（不对就自己点）</p>':''}${closeList(L)}
    ${cl?(cl.act?`<div class="ok"><b>可以关单</b><br>用户是否回复：${cl.u}<br>关单原因：<b>${cl.r}</b></div><button data-copy="reason" style="margin-top:6px">复制关单原因</button>`:`<div class="alert">${cl.note}</div>`):''}
    <div class="ok" style="margin-top:10px"><b>下一步：去社媒系统（录完单、回复实际发出后再去）</b>
     <ol style="padding-left:18px;margin:4px 0 0;line-height:1.7">
@@ -318,7 +337,7 @@ function render(){
 
 async function runAi(){
   const c=cur;if(!c||c.sm||BUSY.has(c.rid))return;const L=c.L;BUSY.add(c.rid);if(cur===c)render();
-  try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
+  try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}await autoClose(c)}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
   BUSY.delete(c.rid);saveLocal();if(cur===c)render();
 }
 async function loadSM(rid){
@@ -377,6 +396,7 @@ async function scanBatch(){
     }
     const rows=[];for(const id of mine){const c=await buildCtx(id);if(isReg(c.v)&&!c.L.submitted)continue;if(c.L.submitted&&c.L.wbDone&&c.L.wbDone>=c.L.submitted&&Date.now()-c.L.submitted>12*3600e3)continue;rows.push(c)}
     if(aiReady())for(const c of rows){const L=c.L;if(L.ai||(L.pri&&L.models.length)||L.submitted)continue;BATCH.info='AI 判断中：'+(c.o.user||'');renderBatch();try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!L.pri){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){}}
+    for(const c of rows){const L=c.L;if(L.submitted&&L.synced)continue;if(L.close!=null||L.closeTouched)continue;BATCH.info='判断关单原因：'+(c.o.user||'');renderBatch();try{await autoClose(c)}catch(e){}}
     saveLocal();BATCH.rows=rows;BATCH.info='当前视图 '+ids.length+' 行里，处理人是你、还没登记的有 '+rows.filter(c=>!c.L.submitted).length+' 条';
   }catch(e){BATCH.info='';fail('找单失败：'+(e.message||e))}
   BATCH.scan=0;renderBatch();
@@ -395,7 +415,7 @@ function renderBatch(){
    <p class="hint" style="margin:8px 0 4px">这批帖子你都做了什么（写进社媒系统的「当前进展」）：</p>
    <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
    <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
-   <div style="display:grid;gap:4px;margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid];return `<div class="out" style="font-size:12px;margin:0"><label style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-bsel="${c.rid}" style="width:auto;margin-top:2px" ${s==='ok'&&!BATCH.off[c.rid]?'checked':''} ${s==='ok'&&!BATCH.run?'':'disabled'}><span style="flex:1;min-width:0"><b>${esc(c.o.user||'（无用户名）')}</b> · ${esc(c.o.plat||'')} · ${esc(formPri(L.pri)||'未分级')} · ${esc(L.models.join('、')||'无型号')} · ${c.shots.length?'截图'+c.shots.length:'无截图'}<br><span style="color:var(--mute)">${esc((c.desc||'').replace(/\s+/g,' ').slice(0,40))}</span>${why?`<br><b style="color:${s==='done'?'var(--ok)':'var(--red)'}">${esc(why)}</b>`:''}${m?`<br><b>${esc(m)}</b>`:''}</span><button data-bopen="${c.rid}" style="min-height:24px;font-size:12px;padding:0 8px" ${BATCH.run?'disabled':''}>看</button></label></div>`}).join('')}</div>
+   <div style="display:grid;gap:4px;margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid];return `<div class="out" style="font-size:12px;margin:0"><label style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-bsel="${c.rid}" style="width:auto;margin-top:2px" ${s==='ok'&&!BATCH.off[c.rid]?'checked':''} ${s==='ok'&&!BATCH.run?'':'disabled'}><span style="flex:1;min-width:0"><b>${esc(c.o.user||'（无用户名）')}</b> · ${esc(c.o.plat||'')} · ${esc(formPri(L.pri)||'未分级')} · ${esc(L.models.join('、')||'无型号')} · ${c.shots.length?'截图'+c.shots.length:'无截图'}<br><span style="color:var(--mute)">${esc((c.desc||'').replace(/\s+/g,' ').slice(0,40))}</span>${closeTxt(L)?`<br><span style="color:var(--blue)">${esc(closeTxt(L))}</span>`:(s==='ok'?'<br><span style="color:var(--mute)">关单原因没判断（没配 AI），只写进展</span>':'')}${why?`<br><b style="color:${s==='done'?'var(--ok)':'var(--red)'}">${esc(why)}</b>`:''}${m?`<br><b>${esc(m)}</b>`:''}</span><button data-bopen="${c.rid}" style="min-height:24px;font-size:12px;padding:0 8px" ${BATCH.run?'disabled':''}>看</button></label></div>`}).join('')}</div>
    ${brOk?'':`<div class="alert" style="margin-top:8px">批量录单要「录单助手桥接」扩展 1.3 以上（现在：${BR?esc(BRV):'没装'}）。<a href="https://ziheng-work.github.io/qingbo-helper/guide.html" target="_blank" rel="noopener">看教程更新</a>，更新后刷新飞书页面。</div>`}
    <button class="danger" id="bGo" style="width:100%;margin-top:8px" ${BATCH.run||!sel.length||!brOk||!d.acts.length?'disabled':''}>${BATCH.run?'录单中，别关页面…':BATCH.arm?'再点一次：真的提交 '+sel.length+' 张表单':'一键录单（'+sel.length+' 条）'}</button>
    ${wbs.length&&!BATCH.run?`<button id="bWb" style="width:100%;margin-top:6px">补回写清博（${wbs.length} 条）</button>`:''}
@@ -424,7 +444,7 @@ async function runBatch(onlyWb){
         BATCH.msg[rid]='① 打开表单并提交中…（'+(i+1)+'/'+list.length+'）';renderBatch();
         c=await buildCtx(rid);const k=BATCH.rows.findIndex(x=>x.rid===rid);if(k>=0)BATCH.rows[k]=c;
         if(isReg(c.v)){BATCH.msg[rid]='刚才已经有人登记了，跳过';continue}
-        applyDefaults(c);saveLocal();
+        applyDefaults(c);try{await autoClose(c)}catch(e){}saveLocal();
         const u=formUrl(c),url=u+(u.includes('#')?'&':'#')+'qb_auto=1&qb_id='+encodeURIComponent(rid);
         const res=await bopen(rid,url);
         if(!res.ok){if(res.unknown||/^表单没提交成功/.test(res.text)){c.L.maybe=Date.now();saveLocal()}BATCH.msg[rid]='✕ '+res.text+(res.notOpened?'':'。那张表单的标签页还开着，可以过去手动处理');continue}
@@ -446,7 +466,7 @@ function renderPend(){
   el.innerHTML=`<div class="card"><h2>从清博带过来的（${ps.length}）</h2>
    <div class="alert" style="margin:0 0 8px">要等<b>录完单、回复也实际发出去了</b>再来点这里（进展写的是「已回复」，没发出去就别写）。表单刚提交时系统还在建单，等一两分钟；没找到的单过会儿再点一次，已写过的不会重复写。</div>
    ${ps.length?`<p class="hint" style="margin-top:0">你在清博表里填好进展的帖子。点一下，插件自己找到对应工单，把「当前进展」写进去${ps.some(([,L])=>L.close!=null&&CLOSE[L.close].act)?'，选了关单情况的顺便写「关单原因」和「用户是否回复」':''}。</p>
-   ${ps.map(([k,L])=>`<div class="out" style="margin-bottom:4px;font-size:12px"><b>${esc(L.user||'（无用户名）')}</b> ${esc(L.ticket||'按帖子链接找单')}<br>${esc(noteText({L}))}${PEND.msg[k]?'<br><b>'+esc(PEND.msg[k])+'</b>':''}</div>`).join('')}
+   ${ps.map(([k,L])=>`<div class="out" style="margin-bottom:4px;font-size:12px"><b>${esc(L.user||'（无用户名）')}</b> ${esc(L.ticket||'按帖子链接找单')}<br>${esc(noteText({L}))}${closeTxt(L)?'<br><span style="color:var(--blue)">'+esc(closeTxt(L))+'</span>':''}${PEND.msg[k]?'<br><b>'+esc(PEND.msg[k])+'</b>':''}</div>`).join('')}
    <button class="danger" id="pendGo" style="width:100%" ${PEND.run?'disabled':''}>${PEND.run?'写入中…':PEND.arm?'再点一次确认写入':'全部写进社媒系统'}</button>`:'<p class="hint" style="margin:0">没有待写入的。在清博表把第 ⑤ 步填好并点过第 ④ 步「回写」（或填了社媒单号）的帖子，会出现在这里。</p>'}
    <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
   </div>`;
@@ -551,7 +571,7 @@ document.addEventListener('click',async e=>{
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.facc){const a=t.dataset.facc;L.facc=L.facc===a?'':a;if(L.facc&&L.facc!=='其他')L.acc=L.facc;saveLocal();render()}
   else if(t.dataset.acc){L.acc=L.acc===t.dataset.acc?'':t.dataset.acc;saveLocal();render()}
-  else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;saveLocal();render()}
+  else if(t.dataset.close!==undefined){const i=+t.dataset.close;L.close=L.close===i?null:i;L.closeTouched=1;saveLocal();if(cur.sm)renderSM();else render()}
   else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
