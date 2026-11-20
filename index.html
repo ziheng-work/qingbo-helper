@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>录单助手</title>
+<style>
+:root{--bg:#f5f6f7;--card:#fff;--ink:#1f2329;--mute:#646a73;--line:#dee0e3;--red:#e8251a;--blue:#3370ff;--ok:#2ea121;--warn:#d98a00;--panel:#eff0f1}
+body.dark{--bg:#1a1a1a;--card:#232323;--ink:#ebebeb;--mute:#a6a6a6;--line:#3a3a3a;--panel:#2c2c2c;--blue:#4c88ff}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{padding:12px;display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px}
+h2{font-size:15px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.n{width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);display:inline-grid;place-items:center;font-size:12px;flex:none}
+h3{font-size:13px;margin:10px 0 6px;color:var(--mute);font-weight:600}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+textarea{min-height:56px;resize:vertical}
+button,.btn{font:inherit;font-weight:600;min-height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px;text-decoration:none}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.danger{background:var(--red);border-color:var(--red);color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kv{display:grid;grid-template-columns:64px minmax(0,1fr);gap:4px 8px;font-size:13px}
+.kv dt{color:var(--mute)}.kv dd{margin:0;word-break:break-all}
+.seg{display:flex;flex-wrap:wrap;gap:5px}
+.seg button{min-height:28px;padding:0 9px;font-size:13px;font-weight:500}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg button.sug{border:2px dashed var(--red)}
+.hint{font-size:12px;color:var(--mute);margin:6px 0 0}
+.alert{background:color-mix(in srgb,var(--red) 12%,var(--card));border-left:3px solid var(--red);padding:8px 10px;border-radius:5px;font-size:13px;margin-top:8px}
+.ok{background:color-mix(in srgb,var(--ok) 12%,var(--card));border-left:3px solid var(--ok);padding:8px 10px;border-radius:5px;font-size:13px;margin-top:8px}
+.out{background:var(--panel);padding:8px 10px;border-radius:6px;white-space:pre-wrap;word-break:break-all;margin:6px 0}
+.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--panel);color:var(--mute)}
+.chip.g{background:var(--ok);color:#fff}.chip.r{background:var(--red);color:#fff}
+.wb label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:4px 0}
+.wb input[type=checkbox]{width:auto;margin-top:3px}
+.empty{text-align:center;color:var(--mute);padding:28px 10px}
+details summary{cursor:pointer;font-weight:600}
+.toast{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="row" style="justify-content:space-between"><b style="font-size:16px">录单助手</b><span class="chip" id="conn">连接中…</span></div>
+
+  <details class="card" id="setBox">
+    <summary>设置</summary>
+    <div style="display:grid;gap:8px;margin-top:8px">
+      <label>进展署名<input id="me" placeholder="如：子恒"></label>
+      <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> 实习生规则（P0/P1 不录单）</label>
+      <p class="hint" style="margin:0">字段名（按包含匹配，表头改名了在这里改）</p>
+      <div id="fmap" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px"></div>
+      <button id="reload">重新读取字段</button>
+    </div>
+  </details>
+
+  <div id="main"><div class="card empty">在表格里点选一条帖子（任意单元格），这里会显示录单和回写面板。</div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="sdk.js"></script>
+<script>
+{
+const {bitable,FieldType}=window.LBS||{};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注'};
+const LBL={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注'};
+const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
+const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
+const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
+const MODEL_RX=[[/x4\s*air/,'X4 Air'],[/x6/,'X6'],[/x5/,'X5'],[/x4/,'X4'],[/x3/,'X3'],[/one\s*x2/,'ONE X2'],[/一英寸|1英寸/,'ONE RS 一英寸'],[/one\s*rs/,'ONE RS'],[/ace\s*pro\s*2/,'Ace Pro 2'],[/ace\s*pro/,'Ace Pro'],[/go\s*ultra/,'GO Ultra'],[/go\s*3s/,'GO 3S'],[/go\s*3/,'GO 3'],[/go\s*2/,'GO 2'],[/flow\s*2\s*pro/,'Flow 2 Pro'],[/flow\s*2/,'Flow 2'],[/flow\s*pro/,'Flow Pro'],[/link\s*2c/,'Link 2C'],[/link\s*2/,'Link 2'],[/luna\s*ultra/,'Luna Ultra'],[/luna\s*pro/,'Luna Pro'],[/mic\s*air/,'Mic Air'],[/mic\s*pro/,'Mic Pro'],[/titan/,'Titan'],[/studio/,'Studio-不确定'],[/(^|[^a-z])app([^a-z]|$)/,'Insta360 APP-不确定'],[/自拍杆/,'自拍杆系列']];
+const PRI_RX=[['P0',/投诉|维权|骗子|垃圾|退钱|差评|避雷|后悔买|曝光|恶心/],['P1',/品控|坏了|故障|死机|黑屏|闪屏|进水|开不了机|无法开机|发烫|过热|裂|碎|花屏|返修/],['P2',/连不上|无法连接|报错|闪退|卡顿|导出|升级|固件|怎么设置|设置不了|不同步|识别不了|失败/],['P3',/怎么选|推荐|对比|哪个好|值得买|求问|请问|能不能|可以吗|怎么用|\?|？/]];
+const ACTS=['已评论回复','已私信','已发话题问FAE','已转FAE','已引导寄修','已点赞'];
+const WAITS=['蹲用户回复','dd用户','蹲FAE答复','无需等待'];
+const CLOSE=[
+ {q:'首回即解决（用法咨询已答清楚）',r:'已远程协助用户解决',u:'无需用户回复',act:1},
+ {q:'用户确认问题已解决',r:'已远程协助用户解决',u:'按实际填',act:1},
+ {q:'FAE/知识库确认做不到，已告知用户',r:'产品局限，暂无解',u:'无需用户回复',act:1},
+ {q:'功能需求/建议，已答复会反馈',r:'已反馈需求',u:'无需用户回复',act:1},
+ {q:'摔坏/需维修，已引导寄回',r:'已引导寄回',u:'无需用户回复',act:1},
+ {q:'资料齐全，已转在线/邮件处理',r:'已转交在线/邮件处理',u:'无需用户回复',act:1},
+ {q:'同一用户重复发同一问题（第二条）',r:'重复咨询',u:'无需用户回复',act:1},
+ {q:'两周内追问 2 次（间隔≥1天）仍无回复',note:'走「终止流程」，进展里写明原因，不关单'},
+ {q:'还在等用户补资料 / 等 FAE',note:'不关，保持「已回，待用户回复」，进展写清在等什么'},
+ {q:'P2 技术问题还没解决',note:'不关，推到「跟进中」并写进展'}];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)};
+const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('已复制')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('已复制')}catch(_){toast('复制失败，请手动复制')}a.remove()}};
+const today=()=>{const d=new Date();return (d.getMonth()+1)+'.'+String(d.getDate()).padStart(2,'0')};
+const fanBucket=n=>{if(n===''||n==null||isNaN(+n))return '';for(const[m,l]of FANS)if(+n>=m)return l;return ''};
+const sugModels=t=>{let s=(t||'').toLowerCase();const o=[];for(const[rx,m]of MODEL_RX)if(rx.test(s)){o.push(m);s=s.replace(new RegExp(rx.source,'g'),' ')}return o};
+const sugPri=t=>{for(const[p,rx]of PRI_RX)if(rx.test(t||''))return p;return ''};
+const formPri=p=>{const m=/^P[0-3]/.exec(p||'');return m?m[0]:(/无需/.test(p||'')?'无需回复':'')};
+
+let CFG={me:'',intern:false,fmap:{...DEF}};
+let LOCAL={};
+try{Object.assign(CFG,JSON.parse(localStorage.getItem('qbcfg')||'{}'));CFG.fmap={...DEF,...CFG.fmap};LOCAL=JSON.parse(localStorage.getItem('qblocal')||'{}')}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem('qbcfg',JSON.stringify(CFG))}catch(e){}};
+const saveLocal=()=>{try{localStorage.setItem('qblocal',JSON.stringify(LOCAL))}catch(e){}};
+
+let table=null,metas=[],F={},cur=null,userId='',busy=false;
+
+function findField(name){if(!name)return null;return metas.find(m=>m.name===name)||metas.find(m=>m.name.includes(name))||null}
+async function loadFields(){
+  table=await bitable.base.getActiveTable();
+  metas=await table.getFieldMetaList();
+  F={};for(const k in DEF)F[k]=findField(CFG.fmap[k]);
+  $('fmap').innerHTML=Object.keys(DEF).map(k=>`<label style="font-size:12px;color:var(--mute)">${LBL[k]}${F[k]?' ✓':' ✕'}<input data-fm="${k}" value="${esc(CFG.fmap[k])}"></label>`).join('');
+  $('conn').textContent=F.url?'已连接':'没找到「录单URL」字段';$('conn').className='chip '+(F.url?'g':'r');
+}
+async function cell(k,rid){const f=F[k];if(!f)return '';try{return (await table.getCellString(f.id,rid))||''}catch(e){return ''}}
+
+async function loadRecord(rid){
+  const v={};for(const k in DEF)v[k]=await cell(k,rid);
+  const o={};
+  try{const p=new URL(v.url).searchParams;for(const[k,n]of Object.entries(K)){const x=p.get('prefill_'+n);if(x)o[k]=x.trim()}o.base=v.url.split('?')[0]}catch(e){}
+  const L=LOCAL[rid]||(LOCAL[rid]={pri:'',models:[],ticket:'',acc:'',acts:[],wait:'',extra:'',close:null});
+  if(!L.models.length&&!L._sug){L.models=[];L._sug=1}
+  cur={rid,v,o,L,desc:o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
+  if(!L.pri&&v.pri)L.pri=v.pri;
+  render();
+}
+
+const noteText=c=>{const L=c.L,p=[];if(L.acc)p.push(L.acc+(L.acts.includes('已评论回复')?'回复':''));p.push(...L.acts.filter(a=>!(L.acc&&a==='已评论回复')));if(L.wait&&L.wait!=='无需等待')p.push(L.wait);if(L.extra)p.push(L.extra);return today()+' '+(CFG.me||'我')+'：'+p.join('，')};
+function formUrl(c){
+  const fp=formPri(c.L.pri);
+  const val={user:c.o.user,type:c.o.type,plat:c.o.plat,time:c.o.time,link:c.o.link,desc:c.desc,pri:fp,fan:fanBucket(c.fans)||c.o.fan};
+  return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&');
+}
+const priOpts=()=>F.pri&&F.pri.type===FieldType.SingleSelect?(F.pri.property?.options||[]).map(o=>o.name):['P0','P1','P2','P3','无需回复'];
+const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property?.options||[]).map(o=>o.name):[];
+
+function render(){
+  const c=cur;if(!c)return;const L=c.L,v=c.v;
+  const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复';
+  const sp=sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
+  const fl=fanBucket(c.fans)||c.o.fan||'';
+  const taken=v.handler&&v.handler.trim();
+  const po=progOpts();
+  if(L.progSel==null)L.progSel=po.includes('已录单')?'已录单':'';
+  const cl=L.close!=null?CLOSE[L.close]:null;
+  $('main').innerHTML=`
+  <div class="card"><h2><span class="n">1</span>帖子</h2>
+   <dl class="kv"><dt>用户名</dt><dd>${esc(c.o.user||'—')}</dd><dt>渠道</dt><dd>${esc(c.o.plat||'—')} · ${esc(c.o.type||'')}</dd><dt>时间</dt><dd>${esc(c.o.time||'—')}</dd><dt>粉丝</dt><dd>${esc(c.fans||'—')} ${fl?'<span class="chip">'+esc(fl)+'</span>':''}</dd><dt>状态</dt><dd>${v.reg?'<span class="chip">已登记:'+esc(v.reg)+'</span> ':''}${v.prog?'<span class="chip g">'+esc(v.prog)+'</span> ':''}${taken?'<span class="chip">处理人:'+esc(v.handler)+'</span>':''}</dd></dl>
+   <h3>帖子简述（要写清具体问题）</h3><textarea id="desc">${esc(c.desc)}</textarea>
+   ${c.o.link?`<p class="hint"><a href="${esc(c.o.link)}" target="_blank" rel="noopener">打开原帖 ↗</a>（截图截帖子本身）</p>`:''}
+   ${!c.o.base?'<div class="alert">这行的「录单URL」读不到，没法生成预填表单。</div>':''}
+   ${taken?'<div class="alert">这条已经有社媒处理人，先确认不是别人在处理，避免重复录单。</div>':''}
+  </div>
+
+  <div class="card"><h2><span class="n">2</span>打标</h2>
+   <h3>优先级${sp?' · 关键词建议 '+sp:''}</h3>
+   <div class="seg">${priOpts().map(p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p?'sug':''}">${esc(p)}</button>`).join('')}</div>
+   ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
+   ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
+   <h3>产品型号（第一个用于转 FAE）</h3>
+   <input id="mS" list="ml" placeholder="搜索型号，回车添加">
+   <div class="seg" style="margin-top:6px">${L.models.map((m,i)=>`<button class="on" data-rm="${i}">${i===0?'① ':''}${esc(m)} ✕</button>`).join('')}${sm.map(m=>`<button data-add="${esc(m)}" style="border-style:dashed">+ ${esc(m)}</button>`).join('')}</div>
+   <p class="hint">要转 FAE 的单别选「Studio-不确定」这类，选具体系统，否则同步 CRM 会失败。</p>
+  </div>
+
+  <div class="card"><h2><span class="n">3</span>录单</h2>
+   ${blocked||noRec?'<p class="hint">这条不录单。</p>':`
+   <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
+   <p class="hint">已带入：用户名、类型、渠道、时间、链接、简述${fp?'、优先级 '+fp:''}${fl?'、粉丝档位':''}。表单里还要：${fp?'':'选优先级、'}${fl?'':'选粉丝档位、'}粘截图、选型号。</p>
+   <h3>提交后填社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">`}
+  </div>
+
+  <div class="card wb"><h2><span class="n">4</span>回写清博（只写这一行）</h2>
+   ${F.reg?`<label><input type="checkbox" data-w="reg" ${L.w_reg!==false?'checked':''}> ${esc(F.reg.name)} → 是</label>`:''}
+   ${F.pri?`<label><input type="checkbox" data-w="pri" ${L.w_pri!==false?'checked':''}> ${esc(F.pri.name)} → ${esc(L.pri||'（先打标）')}</label>`:''}
+   ${F.date?`<label><input type="checkbox" data-w="date" ${L.w_date!==false?'checked':''}> ${esc(F.date.name)} → 今天</label>`:''}
+   ${F.handler?`<label><input type="checkbox" data-w="handler" ${L.w_handler!==false&&!taken?'checked':''}> ${esc(F.handler.name)} → 我${taken?'（已有人，默认不勾）':''}</label>`:''}
+   ${F.prog&&po.length?`<label><input type="checkbox" data-w="prog" ${L.w_prog!==false?'checked':''}> ${esc(F.prog.name)} → <select id="progSel" style="width:auto;padding:2px 6px">${po.map(o=>`<option ${o===L.progSel?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`:''}
+   ${F.note?`<label><input type="checkbox" data-w="note" ${L.w_note===true?'checked':''}> ${esc(F.note.name)} → 追加「社媒单号 ${esc(L.ticket||'…')}」</label>`:''}
+   <p class="hint">只在你点按钮时写入，不会建选项、不改字段、不碰其他行。备注是追加不覆盖。</p>
+   <button class="danger" id="wb" style="margin-top:6px;width:100%">${L.wbArm?'再点一次确认写入':'回写到这一行'}</button>
+  </div>
+
+  <div class="card"><h2><span class="n">5</span>社媒系统：进展 · 关单</h2>
+   <p class="hint" style="margin-top:0">回复实际发出后再点「待首回」完成节点；帖子已有单就别新建，在原单进展里续写。</p>
+   <h3>当前进展</h3>
+   <div class="row"><input id="acc" list="accs" value="${esc(L.acc)}" placeholder="回复账号" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
+   <div class="seg" style="margin-top:6px">${ACTS.map(a=>`<button data-act="${a}" class="${L.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+   <input id="extra" value="${esc(L.extra)}" placeholder="补充：用了哪篇知识库、网盘链接、和谁确认过" style="margin-top:6px">
+   <div class="out" id="note">${esc(noteText(c))}</div>
+   <button data-copy="note">复制进展</button>
+   <h3>关单向导</h3>
+   <select id="closeQ"><option value="">现在是什么情况？</option>${CLOSE.map((x,i)=>`<option value="${i}" ${L.close===i?'selected':''}>${x.q}</option>`).join('')}</select>
+   ${cl?(cl.act?`<div class="ok"><b>可以关单</b><br>用户是否回复：${cl.u}<br>关单原因：<b>${cl.r}</b></div><button data-copy="reason" style="margin-top:6px">复制关单原因</button>`:`<div class="alert">${cl.note}</div>`):''}
+  </div>`;
+}
+
+async function writeVal(f,val){
+  const T=FieldType;let cv;
+  if(f.type===T.SingleSelect){const o=(f.property?.options||[]).find(o=>o.name===val);if(!o)throw new Error('「'+f.name+'」没有选项「'+val+'」，没写入（不会新建选项）');cv={id:o.id,text:o.name}}
+  else if(f.type===T.MultiSelect){const o=(f.property?.options||[]).find(o=>o.name===val);if(!o)throw new Error('「'+f.name+'」没有选项「'+val+'」');cv=[{id:o.id,text:o.name}]}
+  else if(f.type===T.Text)cv=[{type:'text',text:String(val)}];
+  else if(f.type===T.DateTime)cv=val;
+  else if(f.type===T.Checkbox)cv=!!val;
+  else if(f.type===T.Number)cv=+val;
+  else if(f.type===T.User)cv=[{id:val}];
+  else throw new Error('「'+f.name+'」字段类型不支持自动写');
+  await table.setCellValue(f.id,cur.rid,cv);
+}
+async function writeBack(){
+  const c=cur,L=c.L,T=FieldType,done=[],err=[];
+  const d=new Date();d.setHours(0,0,0,0);
+  const plan=[];
+  if(F.reg&&L.w_reg!==false)plan.push([F.reg,F.reg.type===T.Checkbox?true:'是']);
+  if(F.pri&&L.w_pri!==false&&L.pri)plan.push([F.pri,L.pri]);
+  if(F.date&&L.w_date!==false)plan.push([F.date,d.getTime()]);
+  const taken=c.v.handler&&c.v.handler.trim();
+  if(F.handler&&(L.w_handler===true||(L.w_handler!==false&&!taken))){if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}if(userId)plan.push([F.handler,userId]);else err.push('读不到当前用户，处理人没写')}
+  if(F.prog&&L.w_prog!==false&&L.progSel)plan.push([F.prog,L.progSel]);
+  if(F.note&&L.w_note===true&&L.ticket)plan.push([F.note,((c.v.note?c.v.note+' ':'')+'社媒单号 '+L.ticket)]);
+  for(const[f,val]of plan){try{await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
+  toast(done.length?'已写：'+done.join('、'):'没有写入');
+  if(err.length)setTimeout(()=>toast(err.join('；')),1900);
+  await loadRecord(c.rid);
+}
+
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('button');if(!t||!cur)return;const L=cur.L;
+  if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;saveLocal();render()}
+  else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
+  else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
+  else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
+  else if(t.dataset.copy==='note')copy(noteText(cur));
+  else if(t.dataset.copy==='model')copy(L.models.join('、'));
+  else if(t.dataset.copy==='reason')copy(CLOSE[L.close].r);
+  else if(t.id==='wb'){if(busy)return;if(!L.wbArm){L.wbArm=1;render();setTimeout(()=>{if(cur&&cur.L===L&&L.wbArm){L.wbArm=0;render()}},5000);return}L.wbArm=0;busy=true;t.disabled=true;try{await writeBack()}finally{busy=false}}
+});
+document.addEventListener('input',e=>{
+  if(e.target.dataset.fm){CFG.fmap[e.target.dataset.fm]=e.target.value.trim();saveCfg();return}
+  if(!cur)return;const L=cur.L,id=e.target.id;
+  if(id==='desc'){cur.desc=e.target.value}
+  else if(id==='tk')L.ticket=e.target.value.trim();
+  else if(id==='acc')L.acc=e.target.value;
+  else if(id==='extra')L.extra=e.target.value;
+  else return;
+  saveLocal();const n=$('note');if(n)n.textContent=noteText(cur);
+});
+document.addEventListener('change',e=>{
+  if(!cur)return;const L=cur.L,t=e.target;
+  if(t.dataset.w){L['w_'+t.dataset.w]=t.checked;saveLocal()}
+  else if(t.id==='wait'){L.wait=t.value;saveLocal();render()}
+  else if(t.id==='progSel'){L.progSel=t.value;saveLocal()}
+  else if(t.id==='closeQ'){L.close=t.value===''?null:+t.value;saveLocal();render()}
+  else if(t.id==='desc'){render()}
+});
+document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&cur){const v=e.target.value.trim();if(v&&!cur.L.models.includes(v)){cur.L.models.push(v);saveLocal();render();$('mS').focus()}}});
+$('me').value=CFG.me;$('intern').checked=CFG.intern;
+$('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
+$('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
+$('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toast('已重新读取')};
+document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
+
+(async()=>{
+  if(!bitable){$('conn').textContent='SDK 没加载';$('conn').className='chip r';return}
+  try{
+    try{const th=await bitable.bridge.getTheme();document.body.classList.toggle('dark',th==='DARK');bitable.bridge.onThemeChange(ev=>document.body.classList.toggle('dark',ev.data.theme==='DARK'))}catch(e){}
+    await loadFields();
+    const sel=await bitable.base.getSelection();if(sel&&sel.recordId)loadRecord(sel.recordId);
+    bitable.base.onSelectionChange(async ev=>{const s=ev.data;if(!s||!s.recordId)return;if(s.tableId&&table&&s.tableId!==table.id){await loadFields()}if(!cur||cur.rid!==s.recordId)loadRecord(s.recordId)});
+  }catch(e){$('conn').textContent='请在多维表格插件里打开';$('conn').className='chip r'}
+})();
+}
+</script>
+</body>
+</html>
