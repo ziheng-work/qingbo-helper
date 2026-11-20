@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.21';
+const VER='1.30';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -159,8 +159,10 @@ let MODE='',SHOT='';const BUSY=new Set();
 const AI={base:'https://ai-gateway.insta360.cn/v1',key:'',model:''};
 try{Object.assign(AI,JSON.parse(localStorage.getItem('qbai')||'{}'))}catch(e){}
 const saveAi=()=>{try{localStorage.setItem('qbai',JSON.stringify(AI))}catch(e){}};
-let BR=false,BRV='',BRID=0;const BRW={};
-window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=BRV<'1.2';el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新到 1.2 后表单能自动选型号、放截图）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}});
+let BR=false,BRV='',BRID=0;const BRW={},BOW={};
+const vge=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return true};
+const bopen=(id,url)=>new Promise(ok=>{BOW[id]=ok;window.postMessage({type:'QB_OPEN_REQ',id,url},location.origin);setTimeout(()=>{if(BOW[id]){delete BOW[id];ok({ok:false,text:'3 分钟没等到结果',unknown:true})}},180000)});
+window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=!vge(BRV,'1.3');el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新到 1.3 才能批量录单）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}if(d.type==='QB_FORM_RES'&&BOW[d.id]){BOW[d.id](d);delete BOW[d.id]}});
 async function bfetch(url,opt){
   if(BR)return new Promise((ok,no)=>{const id=++BRID;BRW[id]=r=>ok(r);window.postMessage({type:'QB_BRIDGE_REQ',id,url,method:opt.method,headers:opt.headers,body:opt.body},location.origin);setTimeout(()=>{if(BRW[id]){delete BRW[id];no(new Error('桥接扩展没响应'))}},90000)});
   try{const r=await fetch(url,opt);return{ok:r.ok,status:r.status,text:await r.text()}}catch(e){throw new Error('连不上 AI：没装桥接扩展，浏览器拦截了跨域请求')}
@@ -201,6 +203,12 @@ async function cell(k,rid){const f=F[k];if(!f)return '';try{return (await table.
 async function loadRecord(rid){
   if(MODE==='sm')return loadSM(rid);
   SHOT='';
+  cur=await buildCtx(rid);
+  const L=cur.L;
+  render();
+  if(CFG.autoAi!==false&&aiReady()&&!L.ai){const me=cur;setTimeout(()=>{if(cur===me)runAi()},700)}
+}
+async function buildCtx(rid){
   const v={};for(const k in DEF)v[k]=await cell(k,rid);
   const o={};
   try{const p=new URL(v.url).searchParams;for(const[k,n]of Object.entries(K)){const x=p.get('prefill_'+n);if(x)o[k]=x.trim()}o.base=v.url.split('?')[0]}catch(e){}
@@ -209,13 +217,12 @@ async function loadRecord(rid){
   const qm=(v.qmodel||'').split(/[,，、;；\n]+/).map(x=>x.trim()).filter(x=>x&&x!=='-').map(x=>MODELS.find(m=>m.toLowerCase()===x.toLowerCase())||x);
   if(qm.length&&!L.modelTouched)L.models=[...qm];
   const qd=(v.qdesc||'').trim();
-  cur={rid,v,o,L,qm,desc:(qd&&qd!=='-'&&qd!=='/'?qd:'')||o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
+  const cur={rid,v,o,L,qm,desc:(qd&&qd!=='-'&&qd!=='/'?qd:'')||o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
   if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
   if(o.link){LOCAL._links=LOCAL._links||{};LOCAL._links[normLink(o.link)]=rid;L.link=o.link;L.user=o.user||'';saveLocal()}
   cur.shots=[];
   if(F.qshot){try{const val=await table.getCellValue(F.qshot.id,rid);const att=Array.isArray(val)?val.filter(a=>a&&a.token):[];if(att.length){let urls=[];try{urls=await table.getCellAttachmentUrls(att.map(a=>a.token),F.qshot.id,rid)}catch(e){try{urls=await table.getCellAttachmentUrls(F.qshot.id,rid)}catch(_){}}cur.shots=att.map((a,i)=>({name:a.name,type:a.type,url:urls[i]||''}))}}catch(e){cur.shotErr=String(e&&e.message||e)}}
-  render();
-  if(CFG.autoAi!==false&&aiReady()&&!L.ai){const me=cur;setTimeout(()=>{if(cur===me)runAi()},700)}
+  return cur;
 }
 
 const noteText=c=>{const L=c.L,p=[];if(L.acc)p.push(L.acc+(L.acts.includes('已评论回复')?'回复':''));p.push(...L.acts.filter(a=>!(L.acc&&a==='已评论回复')));if(L.wait&&L.wait!=='无需等待')p.push(L.wait);if(L.extra)p.push(L.extra);return today()+' '+(CFG.me||'我')+'：'+p.join('，')};
@@ -267,8 +274,8 @@ function render(){
    <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
    <ol class="hint" style="padding-left:18px;margin:8px 0 0;line-height:1.8">
     <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}${fa&&L.facc?'、'+esc(fa[0]):''}已填好${fa&&!L.facc?'（<b>'+esc(fa[0])+'还没选，先点上面</b>）':''}${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
-    <li>截图：${c.shots&&c.shots.length?(BRV>='1.2'?'扩展会把清博里的帖子截图<b>自动放进</b>「原帖截图」':'清博有截图，桥接扩展更新到 1.2 后会自动放进表单；现在先点上面的截图缩略图另存，再拖进表单'):'清博这条<b>没有截图</b>，要自己截：打开原帖，按 ⌘+Ctrl+Shift+4 框选，回表单点截图框按 ⌘V'}</li>
-    <li>产品型号：${BRV>='1.1'?'打开表单后扩展会<b>自动选上</b>'+(L.models.length?'「'+esc(L.models.join('、'))+'」':'')+'，右下角有绿色提示；没选上再':'（桥接扩展更新到 1.1 后会自动选）现在先'}点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
+    <li>截图：${c.shots&&c.shots.length?(vge(BRV,'1.2')?'扩展会把清博里的帖子截图<b>自动放进</b>「原帖截图」':'清博有截图，桥接扩展更新到 1.2 后会自动放进表单；现在先点上面的截图缩略图另存，再拖进表单'):'清博这条<b>没有截图</b>，要自己截：打开原帖，按 ⌘+Ctrl+Shift+4 框选，回表单点截图框按 ⌘V'}</li>
+    <li>产品型号：${vge(BRV,'1.1')?'打开表单后扩展会<b>自动选上</b>'+(L.models.length?'「'+esc(L.models.join('、'))+'」':'')+'，右下角有绿色提示；没选上再':'（桥接扩展更新到 1.1 后会自动选）现在先'}点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
     <li>提交表单，把社媒单号填到下面，再点第 4 步「回写」</li>
    </ol>
    <h3>社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">
@@ -320,7 +327,7 @@ async function loadSM(rid){
   if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,from:q?1:0};saveLocal()}
   cur={rid,v,L:LOCAL[key],sm:1};renderSM();
 }
-const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||(L.link&&L.wbDone))&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
+const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||(L.link&&(L.wbDone||L.submitted)))&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
 async function findTicket(no,link){
   const f=no?F.s_case:F.s_link,val=no||(link||'').split('?')[0].replace(/\/$/,'');
   if(!f||!val)return null;
@@ -340,8 +347,101 @@ async function findTicket(no,link){
 let PEND={arm:0,msg:{},run:0};
 const reloadLocal=()=>{if(MODE!=='sm'||PEND.run)return;try{const n=JSON.parse(localStorage.getItem('qblocal')||'{}');for(const k in n)if(!k.startsWith('sm:'))LOCAL[k]=n[k]}catch(e){}renderPend()};
 window.addEventListener('storage',e=>{if(e.key==='qblocal')reloadLocal()});window.addEventListener('focus',reloadLocal);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reloadLocal()});
+const BATCH={rows:[],scan:0,run:0,arm:0,msg:{},off:{},info:''};
+const bdef=()=>CFG.bdef||(CFG.bdef={acts:['已评论回复'],wait:''});
+const isReg=v=>{const r=(v.reg||'').trim();return !!r&&!/^(否|未|false|0|-)/i.test(r)};
+function rowState(c){
+  const L=c.L,fp=formPri(L.pri),fa=formAcc(c);
+  if(L.submitted)return L.wbDone&&L.wbDone>=L.submitted?['done','已录单']:['wb','表单已提交，清博还没回写'];
+  if(L.maybe)return['hold','上次没等到结果。先到表单页右上「查看提交记录」确认有没有提交，再点这一行处理'];
+  if(isReg(c.v))return['done','清博已登记'];
+  if(!c.o.base)return['skip','没有录单URL'];
+  if(!fp)return['skip','清博没分级，点这行先打标'];
+  if(fp==='无需回复')return['skip','无需回复，不录单'];
+  if(CFG.intern&&(fp==='P0'||fp==='P1'))return['skip',fp+' 实习生不录单'];
+  if(!L.models.length)return['skip','没有产品型号，点这行先选'];
+  if(fa&&!(L.facc||(CFG.faccDef&&CFG.faccDef[fa[0]])))return['skip','先在上面选「'+fa[0]+'」'];
+  return['ok',''];
+}
+async function scanBatch(){
+  if(BATCH.scan||BATCH.run)return;BATCH.scan=1;BATCH.info='正在找你的单…';renderBatch();
+  try{
+    if(!F.handler)throw new Error('没找到「社媒处理人」这一列');
+    if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}
+    const view=await table.getActiveView();const ids=(await view.getVisibleRecordIdList()).filter(Boolean).slice(0,3000);
+    const mine=[];
+    for(let k=0;k<ids.length;k+=30){
+      const part=ids.slice(k,k+30);
+      const hs=await Promise.all(part.map(async id=>{try{const val=await table.getCellValue(F.handler.id,id);if(Array.isArray(val)&&val.length)return val.some(u=>u&&(u.id===userId||(CFG.me&&String(u.name||u.text||'').includes(CFG.me))));if(val&&CFG.me)return String(await table.getCellString(F.handler.id,id)).includes(CFG.me)}catch(e){}return false}));
+      part.forEach((id,i)=>{if(hs[i])mine.push(id)});
+    }
+    const rows=[];for(const id of mine){const c=await buildCtx(id);if(isReg(c.v)&&!c.L.submitted)continue;if(c.L.submitted&&c.L.wbDone&&c.L.wbDone>=c.L.submitted&&Date.now()-c.L.submitted>12*3600e3)continue;rows.push(c)}
+    if(aiReady())for(const c of rows){const L=c.L;if(L.ai||(L.pri&&L.models.length)||L.submitted)continue;BATCH.info='AI 判断中：'+(c.o.user||'');renderBatch();try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!L.pri){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){}}
+    saveLocal();BATCH.rows=rows;BATCH.info='当前视图 '+ids.length+' 行里，处理人是你、还没登记的有 '+rows.filter(c=>!c.L.submitted).length+' 条';
+  }catch(e){BATCH.info='';fail('找单失败：'+(e.message||e))}
+  BATCH.scan=0;renderBatch();
+}
+function renderBatch(){
+  const el=$('pend');if(!el||MODE!=='qb')return;
+  const rows=BATCH.rows,d=bdef(),need=[...new Set(rows.map(c=>formAcc(c)).filter(Boolean).map(f=>f[0]))];
+  const st=rows.map(rowState),sel=rows.filter((c,i)=>st[i][0]==='ok'&&!BATCH.off[c.rid]),wbs=rows.filter((c,i)=>st[i][0]==='wb');
+  const brOk=BR&&vge(BRV,'1.3');
+  el.innerHTML=`<div class="card"><h2>批量录单</h2>
+   <p class="hint" style="margin-top:0">一次把「社媒处理人是你、还没登记」的帖子全录好：自动填表单、选型号、放清博截图、提交，再回写清博。先切到今天要处理的视图。</p>
+   <button id="bScan" style="width:100%" ${BATCH.scan||BATCH.run?'disabled':''}>${BATCH.scan?'查找中…':rows.length?'重新找一遍':'找出我今天的单'}</button>
+   ${BATCH.info?`<p class="hint">${esc(BATCH.info)}</p>`:''}
+   ${rows.length?`
+   ${need.map(n=>{const opts=Object.values(FORM_ACC).find(f=>f[0]===n)[1];return `<label style="font-size:13px">${esc(n)}（这批都用）<select data-bfacc="${esc(n)}"><option value="">请选</option>${opts.map(o=>`<option ${CFG.faccDef&&CFG.faccDef[n]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`}).join('')}
+   <p class="hint" style="margin:8px 0 4px">这批帖子你都做了什么（写进社媒系统的「当前进展」）：</p>
+   <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+   <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
+   <div style="display:grid;gap:4px;margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid];return `<div class="out" style="font-size:12px;margin:0"><label style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-bsel="${c.rid}" style="width:auto;margin-top:2px" ${s==='ok'&&!BATCH.off[c.rid]?'checked':''} ${s==='ok'&&!BATCH.run?'':'disabled'}><span style="flex:1;min-width:0"><b>${esc(c.o.user||'（无用户名）')}</b> · ${esc(c.o.plat||'')} · ${esc(formPri(L.pri)||'未分级')} · ${esc(L.models.join('、')||'无型号')} · ${c.shots.length?'截图'+c.shots.length:'无截图'}<br><span style="color:var(--mute)">${esc((c.desc||'').replace(/\s+/g,' ').slice(0,40))}</span>${why?`<br><b style="color:${s==='done'?'var(--ok)':'var(--red)'}">${esc(why)}</b>`:''}${m?`<br><b>${esc(m)}</b>`:''}</span><button data-bopen="${c.rid}" style="min-height:24px;font-size:12px;padding:0 8px" ${BATCH.run?'disabled':''}>看</button></label></div>`}).join('')}</div>
+   ${brOk?'':`<div class="alert" style="margin-top:8px">批量录单要「录单助手桥接」扩展 1.3 以上（现在：${BR?esc(BRV):'没装'}）。<a href="https://ziheng-work.github.io/qingbo-helper/guide.html" target="_blank" rel="noopener">看教程更新</a>，更新后刷新飞书页面。</div>`}
+   <button class="danger" id="bGo" style="width:100%;margin-top:8px" ${BATCH.run||!sel.length||!brOk||!d.acts.length?'disabled':''}>${BATCH.run?'录单中，别关页面…':BATCH.arm?'再点一次：真的提交 '+sel.length+' 张表单':'一键录单（'+sel.length+' 条）'}</button>
+   ${wbs.length&&!BATCH.run?`<button id="bWb" style="width:100%;margin-top:6px">补回写清博（${wbs.length} 条）</button>`:''}
+   ${rows.some((c,i)=>st[i][0]==='done'&&c.L.submitted)&&!BATCH.run?`<div class="ok" style="margin-top:8px"><b>下一步</b>：<a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒帖处理系统</a>，在那边的录单助手点「全部写进社媒系统」。</div>`:''}`:''}
+  </div>`;
+}
+function applyDefaults(c){
+  const L=c.L,d=bdef(),fa=formAcc(c),p=platOf(c);
+  if(fa&&!L.facc&&CFG.faccDef&&CFG.faccDef[fa[0]])L.facc=CFG.faccDef[fa[0]];
+  if(L.progSel==null){const po=progOpts();L.progSel=po.includes('已录单')?'已录单':''}
+  if(!L.acts.length)L.acts=[...d.acts];
+  if(!L.wait&&d.wait)L.wait=d.wait;
+  if(!L.acc)L.acc=(L.facc&&L.facc!=='其他'?L.facc:'')||((CFG.accs&&CFG.accs[p]||[])[0])||'';
+}
+async function batchWb(c){
+  const r=await writeBack(c,true);
+  return r.err.length?'回写清博出错：'+r.err.join('；'):'';
+}
+async function runBatch(onlyWb){
+  if(BATCH.run)return;BATCH.run=1;BATCH.msg={};renderBatch();
+  const list=BATCH.rows.filter(c=>{const s=rowState(c)[0];return onlyWb?s==='wb':(s==='ok'&&!BATCH.off[c.rid])});
+  for(let i=0;i<list.length;i++){
+    let c=list[i];const rid=c.rid;
+    try{
+      if(!onlyWb){
+        BATCH.msg[rid]='① 打开表单并提交中…（'+(i+1)+'/'+list.length+'）';renderBatch();
+        c=await buildCtx(rid);const k=BATCH.rows.findIndex(x=>x.rid===rid);if(k>=0)BATCH.rows[k]=c;
+        if(isReg(c.v)){BATCH.msg[rid]='刚才已经有人登记了，跳过';continue}
+        applyDefaults(c);saveLocal();
+        const u=formUrl(c),url=u+(u.includes('#')?'&':'#')+'qb_auto=1&qb_id='+encodeURIComponent(rid);
+        const res=await bopen(rid,url);
+        if(!res.ok){if(res.unknown||/^表单没提交成功/.test(res.text)){c.L.maybe=Date.now();saveLocal()}BATCH.msg[rid]='✕ '+res.text+(res.notOpened?'':'。那张表单的标签页还开着，可以过去手动处理');continue}
+        c.L.submitted=Date.now();delete c.L.maybe;saveLocal();
+      }else applyDefaults(c);
+      BATCH.msg[rid]='② 回写清博…';renderBatch();
+      const e=await batchWb(c);
+      BATCH.msg[rid]=e?'✕ 表单已提交，但'+e:'✓ 已提交表单，已回写清博';
+    }catch(e){BATCH.msg[rid]='✕ '+(e.message||String(e))}
+    renderBatch();
+  }
+  BATCH.run=0;
+  for(let k=0;k<BATCH.rows.length;k++){try{const L=BATCH.rows[k].L,keep=BATCH.rows[k];BATCH.rows[k]=await buildCtx(keep.rid)}catch(e){}}
+  renderBatch();
+}
 function renderPend(){
-  const el=$('pend');if(!el)return;if(MODE!=='sm'){el.innerHTML='';return}
+  const el=$('pend');if(!el)return;if(MODE==='qb'){renderBatch();return}if(MODE!=='sm'){el.innerHTML='';return}
   const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
   el.innerHTML=`<div class="card"><h2>从清博带过来的（${ps.length}）</h2>
    ${ps.length?`<p class="hint" style="margin-top:0">你在清博表里填好进展的帖子。点一下，插件自己找到对应工单，把「当前进展」写进去${ps.some(([,L])=>L.close!=null&&CLOSE[L.close].act)?'，选了关单情况的顺便写「关单原因」和「用户是否回复」':''}。</p>
@@ -423,8 +523,8 @@ async function writeVal(f,val,rid){
   else throw new Error('「'+f.name+'」字段类型不支持自动写');
   await table.setCellValue(f.id,rid||cur.rid,cv);
 }
-async function writeBack(){
-  const c=cur,L=c.L,T=FieldType,done=[],err=[];
+async function writeBack(c=cur,quiet){
+  const L=c.L,T=FieldType,done=[],err=[];
   const d=new Date();d.setHours(0,0,0,0);
   const plan=[];
   const fpw=formPri(L.pri),noLog=(CFG.intern&&(fpw==='P0'||fpw==='P1'))||fpw==='无需回复';
@@ -435,15 +535,16 @@ async function writeBack(){
   if(F.handler&&wOn(L,'handler',!noLog&&!taken)){if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}if(userId)plan.push([F.handler,userId]);else err.push('读不到当前用户，处理人没写')}
   if(F.prog&&wOn(L,'prog',!noLog)&&L.progSel)plan.push([F.prog,L.progSel]);
   if(F.note&&L.w_note===true&&L.ticket)plan.push([F.note,((c.v.note?c.v.note+' ':'')+'社媒单号 '+L.ticket)]);
-  for(const[f,val]of plan){try{await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
+  for(const[f,val]of plan){try{await writeVal(f,val,c.rid);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
   if(done.length){L.wbDone=Date.now();saveLocal()}
+  if(quiet)return{done,err};
   toast(done.length?'已写：'+done.join('、'):'没有写入');
   if(err.length)fail(err.join('；'));
   await loadRecord(c.rid);
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderBatch();return}if(t.dataset.bopen){e.preventDefault();loadRecord(t.dataset.bopen);toast('已在下面打开这一条');return}if(t.id==='bGo'){if(!BATCH.arm){BATCH.arm=1;renderBatch();setTimeout(()=>{if(BATCH.arm&&!BATCH.run){BATCH.arm=0;renderBatch()}},6000);return}BATCH.arm=0;clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
@@ -475,6 +576,7 @@ document.addEventListener('input',e=>{
   saveLocal();const n=$('note');if(n)n.textContent=noteText(cur);
 });
 document.addEventListener('change',e=>{
+  {const t=e.target;if(t.dataset.bfacc){CFG.faccDef=CFG.faccDef||{};CFG.faccDef[t.dataset.bfacc]=t.value;saveCfg();renderBatch();return}if(t.id==='bWait'){bdef().wait=t.value;saveCfg();return}if(t.dataset.bsel){BATCH.off[t.dataset.bsel]=!t.checked;renderBatch();return}}
   if(!cur)return;const L=cur.L,t=e.target;
   if(t.dataset.w){L['w_'+t.dataset.w]=t.checked;saveLocal()}
   else if(t.id==='acc'){const a=t.value.trim(),p=platOf(cur);if(a){CFG.accs=CFG.accs||{};const l=(CFG.accs[p]||[]).filter(x=>x!==a);l.unshift(a);CFG.accs[p]=l.slice(0,6);saveCfg()}render()}

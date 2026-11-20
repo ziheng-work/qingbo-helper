@@ -76,9 +76,18 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
 
 <h1>录单助手 · 使用教程</h1>
 <p class="lead">飞书多维表格的侧边栏插件。在清博表里点一条帖子，它把录单表单帮你填好、把结果写回清博；到社媒帖处理系统点一下，把进展和关单原因写进工单。</p>
-<div class="toc"><a href="#day">每天怎么用</a><a href="#setup">第一次使用</a><a href="#qb">在清博表录单</a><a href="#sm">写进社媒系统</a><a href="#manual">还要自己做的</a><a href="#faq">常见问题</a></div>
+<div class="toc"><a href="#batch">一键批量（最快）</a><a href="#day">一条一条录</a><a href="#setup">第一次使用</a><a href="#qb">在清博表录单</a><a href="#sm">写进社媒系统</a><a href="#manual">还要自己做的</a><a href="#faq">常见问题</a></div>
 
-<h2 id="day">每天怎么用<small>熟了以后一条帖子 1 分钟左右</small></h2>
+<h2 id="batch">一键批量<small>今天的单一次录完</small></h2>
+<div class="day">
+ <div class="you"><b>① 清博表 · 点一下</b>切到今天要处理的视图，在面板顶上「批量录单」点「找出我今天的单」。它会列出「社媒处理人是你、还没登记」的帖子</div>
+ <div><b>② 检查清单</b>每条写着平台、优先级、型号、有没有截图。红字的是缺东西（没分级、没型号），点右边「看」补一下；小红书/企微要在上面选一次具体账号</div>
+ <div class="you"><b>③ 一键录单 · 连点两次</b>扩展在后台逐条打开表单：填好、选型号、放清博截图、提交，然后自动回写清博（已登记、回复日期、处理进展）</div>
+ <div class="you"><b>④ 社媒系统 · 点一下</b>打开社媒帖处理系统的录单助手，点「全部写进社媒系统」，进展（和你选的关单原因）写进每张工单</div>
+</div>
+<p class="tip">批量录单会<b>真的提交表单</b>，提交后撤不回，所以点之前看一眼清单。某条失败时那张表单的标签页会留着，过去手动处理就行；已经提交过的不会重复提交。需要桥接扩展 1.3.0 以上。「待首回」「待关单」的流程节点仍然要自己点。</p>
+
+<h2 id="day">一条一条录<small>熟了以后一条帖子 1 分钟左右</small></h2>
 <div class="day">
  <div><b>① 清博表</b>点一行帖子，面板读出帖子信息</div>
  <div><b>② 打标</b>优先级、型号、简述清博有就用清博的，没有 AI 补</div>
@@ -100,7 +109,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>面板最下面点<b>「自定义插件」</b>，再点右上角<b>「新增插件」</b>。</li>
    <li>名称填「录单助手」，服务地址粘贴下面这串，点确定：</li>
   </ol>
-  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=21</span>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=30</span>
   <p class="tip">插件跟着你的飞书账号走。在清博表装一次，社媒帖处理系统里也能用，不用装两遍。以后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
  </div>
  <div class="fig"><span class="cap">入口</span>
@@ -119,13 +128,13 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>Chrome 地址栏输入 <code>chrome://extensions</code> 回车。</li>
    <li>打开右上角<b>「开发者模式」</b>。</li>
    <li>点<b>「加载未打包的扩展程序」</b>，选刚才的 <code>qingbo-bridge</code> 文件夹。</li>
-   <li>列表里出现「录单助手桥接 1.2.0」就装好了。回飞书刷新页面。</li>
+   <li>列表里出现「录单助手桥接 1.3.0」就装好了。回飞书刷新页面。</li>
   </ol>
   <p class="tip">以前装过旧版（1.0.0）的：新文件覆盖原文件夹，再在扩展卡片上点刷新按钮。</p>
  </div>
  <div class="fig"><span class="cap">chrome://extensions</span>
   <div class="bar"><span class="btn">加载未打包的扩展程序</span><span class="sp"></span><span class="mute">开发者模式</span><span class="pill">开</span></div>
-  <div class="pc"><span class="t">录单助手桥接 <span class="mute" style="font-weight:400">1.2.0</span></span><span class="mute">配合飞书里的「录单助手」插件：转发 AI 请求到公司网关，并在录单表单页自动选上产品型号、放上清博的帖子截图。</span></div>
+  <div class="pc"><span class="t">录单助手桥接 <span class="mute" style="font-weight:400">1.3.0</span></span><span class="mute">配合飞书里的「录单助手」插件：转发 AI 请求到公司网关，并在录单表单页自动选上产品型号、放上清博的帖子截图。</span></div>
  </div>
 </div>
 
@@ -135,7 +144,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
   <p>第一次打开插件，设置会自动展开：</p>
   <ul>
    <li><b>你的名字</b>：你在社媒系统「当前进展」里平时的落款，名字或缩写都行。生成的进展会是「11.20 你的名字：已评论回复」。</li>
-   <li><b>桥接扩展</b>：显示「已安装 1.2.0」就对了。</li>
+   <li><b>桥接扩展</b>：显示「已安装 1.3.0」就对了。</li>
    <li><b>AI Key</b>：去公司 AI 网关 <code>ai-gateway.insta360.cn</code> 自己建一个 Key，粘进来点「连接」，显示「已就绪」。Key 只存在你自己的浏览器里，别发给别人。</li>
   </ul>
   <p>点<b>「设置好了，收起」</b>。</p>
@@ -144,7 +153,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  <div class="fig"><span class="cap">首次设置</span>
   <div class="pc"><span class="t">▼ 设置</span>
    <b>① 你的名字</b><div class="inp">名字或缩写</div>
-   <b>② 装桥接扩展</b><div><span class="pill">桥接扩展：已安装 1.2.0</span></div>
+   <b>② 装桥接扩展</b><div><span class="pill">桥接扩展：已安装 1.3.0</span></div>
    <div style="margin-top:6px"><b>③ AI Key</b></div><div class="inp">••••••••••••••••</div>
    <div><span class="inp" style="display:inline-block">claude-haiku-4-5 ▾</span> <span class="btn">连接</span></div>
    <div class="okb">已就绪</div>
@@ -304,7 +313,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
 <h2 id="faq">常见问题</h2>
 <table>
  <tr><th>现象</th><th>怎么办</th></tr>
- <tr><td>表单里型号或截图没有自动放上</td><td>到 <code>chrome://extensions</code> 看「录单助手桥接」是不是 1.2.0。不是就重新下载，覆盖原文件夹，点扩展卡片上的刷新按钮</td></tr>
+ <tr><td>表单里型号或截图没有自动放上</td><td>到 <code>chrome://extensions</code> 看「录单助手桥接」是不是 1.3.0。不是就重新下载，覆盖原文件夹，点扩展卡片上的刷新按钮</td></tr>
  <tr><td>右下角红色提示「表单里没有这个选项」</td><td>清博写的型号名和表单选项对不上，点「复制型号」手动选最接近的</td></tr>
  <tr><td>显示「这张表不认识」</td><td>插件只认清博表和社媒帖处理系统。换到这两张表的数据视图再打开</td></tr>
  <tr><td>AI 连不上</td><td>看桥接扩展是否「已安装」、Key 是否有效。公司电脑禁了开发者模式的话，就不用 AI，手动打标</td></tr>
