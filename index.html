@@ -115,7 +115,7 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.9';
+const VER='1.10';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -277,6 +277,14 @@ function render(){
    <h3>关单向导</h3>
    <select id="closeQ"><option value="">现在是什么情况？</option>${CLOSE.map((x,i)=>`<option value="${i}" ${L.close===i?'selected':''}>${x.q}</option>`).join('')}</select>
    ${cl?(cl.act?`<div class="ok"><b>可以关单</b><br>用户是否回复：${cl.u}<br>关单原因：<b>${cl.r}</b></div><button data-copy="reason" style="margin-top:6px">复制关单原因</button>`:`<div class="alert">${cl.note}</div>`):''}
+   <div class="ok" style="margin-top:10px"><b>下一步：去社媒系统</b>
+    <ol style="padding-left:18px;margin:4px 0 0;line-height:1.7">
+     <li><a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒帖处理系统</a>，点一下这条帖子对应的工单</li>
+     <li>在那边也打开「录单助手」，上面选的内容会自动带过去，点「写入当前进展」就写进工单；要关单再点「写入关单原因」</li>
+     <li>「待首回」「待关单」的完成节点要自己在工单流程里点</li>
+    </ol>
+    <span class="hint">那边没装录单助手？先用上面的「复制进展」「复制关单原因」手动粘进工单也行。</span>
+   </div>
   </div>`;
 }
 
