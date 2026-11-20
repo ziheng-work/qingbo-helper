@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.40';
+const VER='1.41';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -359,7 +359,7 @@ async function scanSM(){
     }
     for(const c of rows){const L=c.L;defNote(L);if(!L.acc)L.acc=((CFG.accs&&CFG.accs[platOf(c)])||[])[0]||'';
       if(L.close==null&&!L.closeTouched){SMB.info='判断关单原因：'+(c.v.s_user||'');renderPend();try{await autoClose(c)}catch(e){}}}
-    saveLocal();SMB.rows=rows;SMB.open=open;SMB.scanned=1;SMB.info=rows.length?'找到你的 '+rows.length+' 张还没写进展的单':'当前视图里没有你创建的、还没写进展的单';
+    saveLocal();SMB.rows=rows;SMB.open=open;SMB.scanned=1;{const a=rows.filter(c=>isAct(c.L)).length,b=open.length-a;SMB.info=open.length?('你有 '+open.length+' 张开着的单：'+a+' 张可以直接关，'+b+' 张要你写进展'):'当前视图里没有你创建的、还开着的单'}
   }catch(e){SMB.info='';fail('找单失败：'+(e.message||e))}
   SMB.scan=0;renderPend();
 }
@@ -370,7 +370,8 @@ async function smWrite(rid,L){
   if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
   return done;
 }
-const openLeft=()=>SMB.open.filter(c=>!c.fxDone&&!(c.done&&c.L.close!=null&&CLOSE[c.L.close].act));
+const isAct=L=>L.close!=null&&CLOSE[L.close].act;
+const openLeft=()=>SMB.open.filter(c=>!c.fxDone&&!(isAct(c.L)&&!SMB.off[c.rid]&&SMB.rows.includes(c)));
 async function runFix(){
   if(SMB.fx)return;SMB.fx=1;SMB.fxMsg={};
   const list=openLeft().filter(c=>c.fx.close!==''||c.fx.note.trim());renderPend();
@@ -379,7 +380,7 @@ async function runFix(){
       const done=[],cl=c.fx.close!==''?CLOSE[+c.fx.close]:null;
       if(c.fx.note.trim()&&F.s_prog){const old=(await table.getCellString(F.s_prog.id,c.rid))||'';const note=today()+' '+CFG.me+'：'+c.fx.note.trim();await writeVal(F.s_prog,note+(old?'\n'+old:''),c.rid);done.push('进展')}
       if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,c.rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
-      if(cl&&cl.act){c.fxDone=1;c.L.close=+c.fx.close;c.L.closeTouched=1}
+      if(cl&&cl.act){c.L.close=+c.fx.close;c.L.closeTouched=1}if(done.length)c.fxDone=1;
       try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}c.fx.note='';SMB.fxMsg[c.rid]='✓ '+(done.join('、')||'没有要写的');
     }catch(e){SMB.fxMsg[c.rid]='✕ '+(e.message||String(e))}
     renderPend();
@@ -388,7 +389,7 @@ async function runFix(){
 }
 async function runSM(){
   if(SMB.run)return;SMB.run=1;SMB.msg={};
-  const list=SMB.rows.filter(c=>!SMB.off[c.rid]&&!c.done);SMB.total=list.length;renderPend();
+  const list=SMB.rows.filter(c=>!SMB.off[c.rid]&&!c.done&&isAct(c.L));SMB.total=list.length;renderPend();
   for(const c of list){
     SMB.msg[c.rid]='写入中…';renderPend();
     try{const done=await smWrite(c.rid,c.L);c.done=1;try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='✓ '+done.join('、')}
@@ -523,29 +524,30 @@ async function runBatch(onlyWb){
 }
 function renderPend(){
   const el=$('pend');if(!el)return;if(MODE==='qb'){renderBatch();return}if(MODE!=='sm'){el.innerHTML='';return}
-  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',rows=SMB.rows,sel=rows.filter(c=>!SMB.off[c.rid]&&!c.done),d=bdef();
+  const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',rows=SMB.rows.filter(c=>isAct(c.L)),sel=rows.filter(c=>!SMB.off[c.rid]&&!c.done),d=bdef();
   const chip=L=>{const ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return ct?` <span class="chip" title="${esc(L.closeAi||'')}">${esc(ct)}</span>`:''};
   const moreOpen=el.querySelector('#sMore')?.open;
   let btn;
   if(SMB.run||PEND.run)btn=`<button class="primary big" disabled>写入中…</button>`;
   else if(SMB.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
   else if(!SMB.scanned)btn=`<button class="primary big" id="sScan" ${CFG.me?'':'disabled'}>一键处理我的单</button>`;
-  else if(sel.length)btn=`<button class="danger big" id="sGo">确认写入 ${sel.length} 张</button>`;
-  else btn=`<button class="big" id="sScan">${rows.length?'都写完了 · 重新找':'没有要写的单 · 重新找'}</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="sGo">一键关单 ${sel.length} 张</button>`;
+  else btn=`<button class="big" id="sScan">重新找一遍</button>`;
   el.innerHTML=`<div class="card">
    ${btn}
    ${CFG.me?'':'<div class="alert">先在上面「设置」里填「进展落款」（你的名字或缩写）。</div>'}
-   <p class="hint" style="text-align:center">${esc(SMB.info)||'找出你创建的、还没写进展的单（清博录的、手动录的都算），写进展并判断关单原因。<b>回复实际发出后再点</b>'}</p>
+   <p class="hint" style="text-align:center">${esc(SMB.info)||'找出你创建的、还开着的单（清博录的、手动录的都算）：能关的一键关，不能关的列出来给你写进展。<b>回复实际发出后再点</b>'}</p>
    ${rows.map(c=>{const L=c.L,m=SMB.msg[c.rid];return `<div class="li">${c.done?'<span style="width:16px;text-align:center;color:var(--ok)">✓</span>':`<input type="checkbox" data-ssel="${c.rid}" ${SMB.off[c.rid]?'':'checked'} ${SMB.run?'disabled':''}>`}<span class="t"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc((L.models||[])[0]||'')}</span>${chip(L)}<br><span class="s" style="color:${m?(m.startsWith('✓')?'var(--ok)':m.startsWith('✕')?'var(--red)':'var(--mute)'):'var(--mute)'}">${esc(m||noteText({L}))}</span></span><button class="lk" data-sopen="${c.rid}" ${SMB.run?'disabled':''}>改</button></div>`}).join('')}
    ${ps.length&&SMB.scanned&&!sel.length&&!PEND.run&&!SMB.run?`<button id="pendGo" style="width:100%;margin-top:8px">清博录的还有 ${ps.length} 条没在当前视图找到，按链接再找一次</button>`:''}
    ${ps.map(([k,L])=>PEND.msg[k]?`<div class="li"><span class="t"><b>${esc(L.user||'')}</b><br><span class="s" style="color:${PEND.msg[k].startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(PEND.msg[k])}</span></span></div>`:'').join('')}
-   ${SMB.scanned&&!sel.length&&!SMB.run&&!PEND.run?(()=>{const ol=openLeft();return ol.length?`<div style="margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><b style="font-size:14px">还没关单的（${ol.length}）</b><p class="hint" style="margin:2px 0 6px">这些单插件判断不了或还不能关。有新情况的，选关单原因或补一句进展，再点下面的按钮写入；还在等的不用动。</p>
+   ${SMB.scanned&&!SMB.run&&!PEND.run?(()=>{const ol=openLeft();return ol.length?`<div style="margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><b style="font-size:14px">要你写进展的（${ol.length}）</b><p class="hint" style="margin:2px 0 6px">这些单还不能关，插件不替你写。给每张写一句进展（会自动加「${esc(today())} ${esc(CFG.me||'落款')}：」），能关的也可以在下拉里选关单原因，然后点下面的按钮。不用动的留空。</p>
     ${ol.map(c=>{const m=SMB.fxMsg[c.rid],last=(c.v.s_prog||'').split('\n')[0];return `<div class="li" style="display:block"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute);font-size:12px">${esc(c.v.s_case||'')} ${esc(formPri(c.L.pri)||'')}</span>${c.L.closeAi&&!c.L.closeTouched?`<br><span class="s" style="color:var(--mute)">AI：${esc(c.L.closeAi)}</span>`:''}${last?`<br><span class="s" style="color:var(--mute)">最新进展：${esc(last.slice(0,60))}</span>`:''}
-     <select data-fxc="${c.rid}" style="margin-top:6px" ${SMB.fx?'disabled':''}><option value="">先不关单</option>${CLOSE.map((x,i)=>x.act?`<option value="${i}" ${String(c.fx.close)===String(i)?'selected':''}>${esc(x.q)} → ${esc(x.r)}</option>`:'').join('')}</select>
-     <input data-fxn="${c.rid}" value="${esc(c.fx.note)}" placeholder="补一句进展（可不填），如：用户回复已解决" style="margin-top:4px" ${SMB.fx?'disabled':''}>${m?`<span class="s" style="display:block;color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</div>`}).join('')}
-    <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">你的单都处理完了。</div>':'')})():''}
+     <input data-fxn="${c.rid}" value="${esc(c.fx.note)}" placeholder="写进展，如：Support号回复，蹲用户补 LogID" style="margin-top:6px" ${SMB.fx?'disabled':''}>
+     <select data-fxc="${c.rid}" style="margin-top:4px" ${SMB.fx?'disabled':''}><option value="">先不关单</option>${CLOSE.map((x,i)=>x.act?`<option value="${i}" ${String(c.fx.close)===String(i)?'selected':''}>${esc(x.q)} → ${esc(x.r)}</option>`:'').join('')}</select>
+${m?`<span class="s" style="display:block;color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</div>`}).join('')}
+    <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">今天你的单都处理完了。</div>':'')})():''}
    <details id="sMore" style="margin-top:8px" ${moreOpen?'open':''}><summary class="hint" style="font-weight:400">更多选项</summary>
-    <p class="hint" style="margin:8px 0 4px">默认写的进展（没单独改过的单都用这个，改完点「重新找」生效）：</p>
+    <p class="hint" style="margin:8px 0 4px">直接关单的那些写什么进展（改完点「重新找」生效）：</p>
     <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
     <input id="bExtra" value="${esc(d.extra||'')}" placeholder="或者自己写一句，比如：Support号回复 发话题" style="margin-top:6px">
     <button id="sScan2" style="width:100%;margin-top:8px">重新找一遍</button>
