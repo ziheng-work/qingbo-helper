@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.38';
+const VER='1.39';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -317,31 +317,12 @@ function render(){
    <button class="danger" id="wb" style="margin-top:6px;width:100%">${L.wbArm?'再点一次确认写入':'回写到这一行'}</button>
   </div>
 
-  <div class="card"><h2><span class="n">5</span>社媒系统：进展 · 关单</h2>
-   <p class="hint" style="margin-top:0">回复实际发出后再点「待首回」完成节点；帖子已有单就别新建，在原单进展里续写。</p>
-   <h3>当前进展</h3>
-   ${accRow(c)}<div class="row"><input id="acc" value="${esc(L.acc)}" placeholder="回复账号（没有就手填，会按平台记住）" style="flex:1"><select id="wait" style="flex:1"><option value="">在等什么</option>${WAITS.map(w=>`<option ${w===L.wait?'selected':''}>${w}</option>`).join('')}</select></div>
-   <div class="seg" style="margin-top:6px">${ACTS.map(a=>`<button data-act="${a}" class="${L.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
-   <input id="extra" value="${esc(L.extra)}" placeholder="补充：用了哪篇知识库、网盘链接、和谁确认过" style="margin-top:6px">
-   <div class="out" id="note">${esc(noteText(c))}</div>
-   <button data-copy="note">复制进展</button>
-   <h3>关单向导</h3>
-   <p class="hint" style="margin:0 0 4px">现在是什么情况？点一个：</p>${L.closeAi&&!L.closeTouched?'<p class="hint" style="margin:0 0 4px;color:var(--blue)">AI 已选：'+esc(L.closeAi)+'（不对就自己点）</p>':''}${closeList(L)}
-   ${cl?(cl.act?`<div class="ok"><b>可以关单</b><br>用户是否回复：${cl.u}<br>关单原因：<b>${cl.r}</b></div><button data-copy="reason" style="margin-top:6px">复制关单原因</button>`:`<div class="alert">${cl.note}</div>`):''}
-   <div class="ok" style="margin-top:10px"><b>下一步：去社媒系统（录完单、回复实际发出后再去）</b>
-    <ol style="padding-left:18px;margin:4px 0 0;line-height:1.7">
-     <li><a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒帖处理系统</a>，在那边也打开「录单助手」</li>
-     <li>面板顶上会列出你在这里填好的帖子，点「全部写进社媒系统」，插件自己找单、写进展和关单原因（可以攒几条一起写）</li>
-     <li>「待首回」「待关单」的完成节点要自己在工单流程里点</li>
-    </ol>
-    <span class="hint">那边没装录单助手？先用上面的「复制进展」「复制关单原因」手动粘进工单也行。</span>
-   </div>
-  </div>`;
+`;
 }
 
 async function runAi(){
   const c=cur;if(!c||c.sm||BUSY.has(c.rid))return;const L=c.L;BUSY.add(c.rid);if(cur===c)render();
-  try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}await autoClose(c)}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
+  try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
   BUSY.delete(c.rid);saveLocal();if(cur===c)render();
 }
 function smL(rid,v){
@@ -453,7 +434,6 @@ async function scanBatch(){
     }
     const rows=[];for(const id of mine){const c=await buildCtx(id);if(isReg(c.v)&&!c.L.submitted)continue;if(c.L.submitted&&c.L.wbDone&&c.L.wbDone>=c.L.submitted&&Date.now()-c.L.submitted>12*3600e3)continue;rows.push(c)}
     if(aiReady())for(const c of rows){const L=c.L;if(L.ai||(L.pri&&L.models.length)||L.submitted)continue;BATCH.info='AI 判断中：'+(c.o.user||'');renderBatch();try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!L.pri){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){}}
-    for(const c of rows){const L=c.L;if(L.submitted&&L.synced)continue;if(L.close!=null||L.closeTouched)continue;BATCH.info='判断关单原因：'+(c.o.user||'');renderBatch();try{await autoClose(c)}catch(e){}}
     saveLocal();BATCH.rows=rows;BATCH.scanned=1;{const n=rows.filter(c=>rowState(c)[0]==='ok').length;BATCH.info=rows.length?('找到你的 '+rows.length+' 条，可以录 '+n+' 条'):'当前视图里没有处理人是你、还没登记的帖子'}
   }catch(e){BATCH.info='';fail('找单失败：'+(e.message||e))}
   BATCH.scan=0;renderBatch();
@@ -469,7 +449,7 @@ function renderBatch(){
   if(BATCH.run)btn=`<button class="primary big" disabled>录单中… ${Math.min(prog,BATCH.total||0)}/${BATCH.total||0}</button>`;
   else if(BATCH.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
   else if(!BATCH.scanned)btn=`<button class="primary big" id="bScan">一键录单</button>`;
-  else if(sel.length)btn=`<button class="danger big" id="bGo" ${brOk&&(d.acts.length||d.extra)?'':'disabled'}>确认录单 ${sel.length} 条</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="bGo" ${brOk?'':'disabled'}>确认录单 ${sel.length} 条</button>`;
   else btn=`<button class="big" id="bScan">${rows.length?'没有可录的了 · 重新找':'没找到你的待录单 · 重新找'}</button>`;
   const ico={ok:'',done:'✓',wb:'!',hold:'!',skip:'✕'};
   el.innerHTML=`<div class="card">
@@ -477,17 +457,12 @@ function renderBatch(){
    <p class="hint" style="text-align:center">${esc(BATCH.info||'自动找出处理人是你、还没登记的帖子，填表提交并回写清博')}</p>
    ${BATCH.scanned&&!brOk?`<div class="alert">要先把「录单助手桥接」扩展更新到 1.3（现在：${BR?esc(BRV):'没装'}）。<a href="https://ziheng-work.github.io/qingbo-helper/guide.html#setup" target="_blank" rel="noopener">怎么更新</a></div>`:''}
    ${miss.map(faccSel).join('')}
-   ${rows.length?`<div style="margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li">${s==='ok'?`<input type="checkbox" data-bsel="${c.rid}" ${BATCH.off[c.rid]?'':'checked'} ${BATCH.run?'disabled':''}>`:`<span style="width:16px;text-align:center;color:${s==='done'?'var(--ok)':'var(--red)'}">${ico[s]}</span>`}<span class="t"><b>${esc(c.o.user||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc(L.models[0]||'')}</span>${ct&&s!=='skip'?` <span class="chip" title="${esc(L.closeAi||'')}">${esc(ct)}</span>`:''}${m||why?`<br><span class="s" style="color:${(m||'').startsWith('✓')||s==='done'&&!m?'var(--ok)':(m&&!m.startsWith('✕')?'var(--mute)':'var(--red)')}">${esc(m||why)}</span>`:''}</span><button class="lk" data-bopen="${c.rid}" ${BATCH.run?'disabled':''}>改</button></div>`}).join('')}</div>`:''}
+   ${rows.length?`<div style="margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li">${s==='ok'?`<input type="checkbox" data-bsel="${c.rid}" ${BATCH.off[c.rid]?'':'checked'} ${BATCH.run?'disabled':''}>`:`<span style="width:16px;text-align:center;color:${s==='done'?'var(--ok)':'var(--red)'}">${ico[s]}</span>`}<span class="t"><b>${esc(c.o.user||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc(L.models[0]||'')}</span>${m||why?`<br><span class="s" style="color:${(m||'').startsWith('✓')||s==='done'&&!m?'var(--ok)':(m&&!m.startsWith('✕')?'var(--mute)':'var(--red)')}">${esc(m||why)}</span>`:''}</span><button class="lk" data-bopen="${c.rid}" ${BATCH.run?'disabled':''}>改</button></div>`}).join('')}</div>`:''}
    ${wbs.length&&!BATCH.run?`<button id="bWb" style="width:100%;margin-top:8px">补回写清博（${wbs.length} 条）</button>`:''}
-   ${ran&&!BATCH.run?`<div class="ok"><b>回复都发出去后</b>，<a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒系统</a>点「一键写进社媒系统」。</div>`:''}
    ${BATCH.scanned&&!BATCH.run?`<details style="margin-top:8px"><summary class="hint" style="font-weight:400">更多选项</summary>
     ${need.filter(n=>!miss.includes(n)).map(faccSel).join('')}
-    <p class="hint" style="margin:8px 0 4px">写进社媒系统的进展（这批都做了什么）：</p>
-    <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
-    <input id="bExtra" value="${esc(d.extra||'')}" placeholder="或者自己写一句，比如：Support号回复 发话题" style="margin-top:6px">
-    <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
     <button id="bScan2" style="width:100%;margin-top:8px">重新找一遍</button>
-    <p class="hint">「确认录单」会真的提交表单，撤不回。圆角标签是 AI 判断的关单原因，不对点「改」。</p>
+    <p class="hint">「确认录单」会真的提交表单，撤不回。</p>
    </details>`:''}
   </div>`;
 }
@@ -512,7 +487,7 @@ async function runBatch(onlyWb){
         BATCH.msg[rid]='提交表单中…';renderBatch();
         c=await buildCtx(rid);const k=BATCH.rows.findIndex(x=>x.rid===rid);if(k>=0)BATCH.rows[k]=c;
         if(isReg(c.v)){BATCH.msg[rid]='刚才已经有人登记了，跳过';continue}
-        applyDefaults(c);try{await autoClose(c)}catch(e){}saveLocal();
+        applyDefaults(c);saveLocal();
         const u=formUrl(c),url=u+(u.includes('#')?'&':'#')+'qb_auto=1&qb_id='+encodeURIComponent(rid);
         const res=await bopen(rid,url);
         if(!res.ok){if(res.unknown||/^表单没提交成功/.test(res.text)){c.L.maybe=Date.now();saveLocal()}BATCH.msg[rid]='✕ '+res.text+(res.notOpened?'':'。那张表单的标签页还开着，可以过去手动处理');continue}

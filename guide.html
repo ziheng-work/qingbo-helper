@@ -80,7 +80,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
 
 <h2 id="batch">一键批量<small>今天的单一次录完</small></h2>
 <div class="day">
- <div class="you"><b>① 点「一键录单」</b>在清博表切到今天的视图，点面板顶上的蓝色大按钮。它自己找出处理人是你、还没登记的帖子，AI 顺手判断好关单原因</div>
+ <div class="you"><b>① 点「一键录单」</b>在清博表切到今天的视图，点面板顶上的蓝色大按钮。它自己找出处理人是你、还没登记的帖子</div>
  <div class="you"><b>② 点「确认录单 N 条」</b>扩展在后台逐条填表、选型号、放截图、提交，再回写清博。红字的是缺东西不能录的，点「改」补一下</div>
  <div class="you"><b>③ 到社媒系统点「一键处理我的单」</b>它找出你创建的、还没写进展的单（清博录的、自己手动填表录的都算），AI 判断关单原因；再点「确认写入」，进展和关单原因写进每张工单。<b>要等回复实际发出去之后再点</b></div>
 </div>
@@ -93,8 +93,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  <div><b>② 打标</b>优先级、型号、简述清博有就用清博的，没有 AI 补</div>
  <div class="you"><b>③ 录单 · 你来做</b>点「打开预填表单」，检查后提交</div>
  <div><b>④ 回写清博</b>连点两次红色按钮</div>
- <div><b>⑤ 进展 · 关单</b>点选回复账号、做了什么、关单情况</div>
- <div class="you"><b>⑥ 社媒系统 · 你来做</b>攒几条后，点一次「全部写进社媒系统」</div>
+ <div class="you"><b>⑤ 社媒系统 · 你来做</b>回复发出后，到社媒系统点「一键处理我的单」</div>
 </div>
 <p class="tip">表单会自动填好，包括产品型号和<b>原帖截图</b>（用清博里已有的「帖子截图」）。清博没截图的那条才要你自己截。提交需要你自己点。</p>
 
@@ -109,7 +108,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>面板最下面点<b>「自定义插件」</b>，再点右上角<b>「新增插件」</b>。</li>
    <li>名称填「录单助手」，服务地址粘贴下面这串，点确定：</li>
   </ol>
-  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=38</span>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=39</span>
   <p class="tip">插件跟着你的飞书账号走。在清博表装一次，社媒帖处理系统里也能用，不用装两遍。以后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
  </div>
  <div class="fig"><span class="cap">入口</span>
@@ -160,7 +159,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  </div>
 </div>
 
-<h2 id="qb">在清博表录单<small>面板上的 ①–⑤ 从上往下走</small></h2>
+<h2 id="qb">在清博表录单<small>面板上的 ①–④ 从上往下走</small></h2>
 
 <div class="step">
  <div>
@@ -251,50 +250,24 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  </div>
 </div>
 
-<div class="step">
- <div>
-  <h3><span class="n">⑤</span>填进展和关单情况</h3>
-  <ul>
-   <li><b>回复账号</b>：点一个；没有的手填，下次会记住。</li>
-   <li><b>做了什么</b>：已评论回复、已私信、已发话题问FAE…可多选。</li>
-   <li><b>在等什么</b>和<b>补充</b>：用了哪篇知识库、网盘链接、和谁确认过。</li>
-   <li><b>关单向导</b>：点一个符合现在情况的，告诉你能不能关、关单原因选哪个。</li>
-  </ul>
-  <p>这里只是先填好，下一步到社媒系统一次写进去。</p>
- </div>
- <div class="fig"><span class="cap">⑤ 进展 · 关单</span>
-  <div class="pc"><span class="t"><i>5</i>进展 · 关单</span>
-   <div class="chips"><span class="mute">小红书回复账号：</span><span class="chip on">小影技术君</span></div>
-   <div class="chips"><span class="chip on">已评论回复</span><span class="chip">已私信</span><span class="chip">已转FAE</span></div>
-   <div class="out">11.20 你的名字：小影技术君回复，蹲用户回复</div>
-   <span class="mute">现在是什么情况？点一个：</span>
-   <div class="chip on" style="margin:3px 0">首回即解决（用法咨询已答清楚）</div>
-   <div class="chip" style="margin:3px 0">还在等用户补资料 / 等 FAE</div>
-   <div class="okb"><b>可以关单</b><br>关单原因：已远程协助用户解决</div>
-  </div>
- </div>
-</div>
-
-<h2 id="sm">写进社媒系统<small>攒几条，一次写完</small></h2>
+<h2 id="sm">写进社媒系统<small>回复发出后，一次写完</small></h2>
 <div class="step">
  <div>
   <ol>
-   <li>打开社媒帖处理系统，切到<b>「社媒支持（当日）」</b>视图。</li>
-   <li>打开录单助手（拼图图标 → 自定义插件 → 录单助手）。</li>
-   <li>顶上「从清博带过来的」列出你刚才处理的帖子。</li>
-   <li>点<b>「全部写进社媒系统」</b>，再点一次确认。插件按帖子链接找到每张工单，写进<b>当前进展</b>；选了关单情况的，顺带写<b>关单原因</b>和<b>用户是否回复</b>。</li>
-   <li>每条后面显示 ✓ 或 ✕。✕ 会写原因，最常见的是表单刚提交、系统还没建好单，等一会儿再点。</li>
+   <li>打开社媒帖处理系统，切到<b>「社媒支持（当日）」</b>视图，打开录单助手。</li>
+   <li>第一次用：在「设置」里填<b>进展落款</b>（你在进展里平时写的名字或缩写）。</li>
+   <li>点蓝色<b>「一键处理我的单」</b>：找出你创建的、还没写进展的单（清博录的、手动填表录的都算），AI 给每张判断关单原因或「不关单」。</li>
+   <li>看一眼清单，不对的点「改」；再点红色<b>「确认写入 N 张」</b>：进展写在最上面，该关的顺带写关单原因和用户是否回复。</li>
+   <li>每张后面显示 ✓ 或 ✕，✕ 会写原因。</li>
   </ol>
-  <p class="tip">只有在清博表点过「回写」的帖子才会出现在这里，随手点开看过的不会。</p>
-  <p>单独处理某张单：在「按单号找单」里填单号点「打开」，或直接在表里点那一行。</p>
-  <p class="warn">写同事建的单之前，先把自己加进那张单「待首回」节点的分配人员，否则字段是灰的，会写入失败。</p>
+  <p class="tip">进展默认写「已评论回复」，在「更多选项」里可以换成别的或自己写一句。在清博那边选过回复账号的帖子会自动带过来。</p>
+  <p class="warn">写同事建的单之前，先把自己加进那张单「待首回」节点的分配人员，否则字段是灰的，会写入失败。「待首回」「待关单」节点仍要自己点。</p>
  </div>
  <div class="fig"><span class="cap">社媒系统里的面板</span>
-  <div class="pc"><span class="t">从清博带过来的（2）</span>
-   <div class="out"><b>用户A</b><br>11.20 你的名字：小影技术君回复，蹲用户回复</div>
-   <div class="out"><b>用户B</b><br>11.20 你的名字：官方号回复<br><b>✓ 进展、关单原因、用户是否回复</b></div>
-   <span class="btn red">全部写进社媒系统</span>
-   <div style="display:flex;gap:6px;margin-top:8px"><div class="inp" style="flex:1;margin:0">按单号找单</div><span class="btn">打开</span></div>
+  <div class="pc">
+   <span class="btn red" style="width:100%">确认写入 2 张</span>
+   <div class="out"><b>用户A</b> P3 X5 <span class="pill">已反馈需求</span><br>11.20 落款：已评论回复</div>
+   <div class="out"><b>用户B</b> P2 Flow 2 <span class="pill">不关单</span><br>11.20 落款：已评论回复，蹲用户回复</div>
   </div>
  </div>
 </div>
