@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.39';
+const VER='1.40';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -330,7 +330,7 @@ function smL(rid,v){
   if(!LOCAL[key]){const qr=LOCAL._links&&LOCAL._links[normLink(v.s_link)];const q=qr&&LOCAL[qr];LOCAL[key]={acc:q?.acc||'',acts:[...(q?.acts||[])],wait:q?.wait||'',extra:q?.extra||'',close:q?.close??null,closeAi:q?.closeAi||'',closeTouched:q?.closeTouched||0,from:q?1:0};saveLocal()}
   return LOCAL[key];
 }
-const SMB={rows:[],scan:0,scanned:0,run:0,msg:{},off:{},info:'',total:0};
+const SMB={rows:[],open:[],fx:0,fxMsg:{},scan:0,scanned:0,run:0,msg:{},off:{},info:'',total:0};
 const defNote=L=>{const d=bdef();if(!L.acts.length&&!L.extra){L.acts=[...d.acts];if(d.extra)L.extra=d.extra}if(!L.wait&&d.wait)L.wait=d.wait};
 async function scanSM(){
   if(SMB.scan||SMB.run)return;SMB.scan=1;SMB.info='';renderPend();
@@ -345,19 +345,21 @@ async function scanSM(){
       const hs=await Promise.all(part.map(async id=>{try{const val=await table.getCellValue(F.s_creator.id,id);const a=Array.isArray(val)?val:(val?[val]:[]);if(a.some(u=>u&&u.id&&u.id===userId))return true;if(CFG.me&&a.some(u=>u&&String(u.name||u.text||'').includes(CFG.me)))return true}catch(e){}return false}));
       part.forEach((id,i)=>{if(hs[i])mine.push(id)});
     }
-    const rows=[];
+    const rows=[],open=[];
     for(const rid of mine){
       const v={};for(const k of ['s_case','s_user','s_link','s_status','s_prog','s_reason','s_replied','pri','s_desc','s_model'])v[k]=await cell(k,rid);
       if((v.s_reason||'').trim())continue;
-      if(CFG.me&&(v.s_prog||'').includes(CFG.me+'：'))continue;
       if(/已关单|终止|已完成/.test(v.s_status||''))continue;
       const L=smL(rid,v);L.pri=(v.pri||'').trim();L.models=(v.s_model||'').split(/[,，、;；\n]+/).map(x=>x.trim()).filter(Boolean);
       v.title='';
-      rows.push({rid,v,L,sm:1,o:{plat:'',link:v.s_link,user:v.s_user},desc:v.s_desc||''});
+      const c={rid,v,L,sm:1,o:{plat:'',link:v.s_link,user:v.s_user},desc:v.s_desc||'',fx:{close:'',note:''}};
+      open.push(c);
+      if(CFG.me&&(v.s_prog||'').includes(CFG.me+'：'))continue;
+      rows.push(c);
     }
     for(const c of rows){const L=c.L;defNote(L);if(!L.acc)L.acc=((CFG.accs&&CFG.accs[platOf(c)])||[])[0]||'';
       if(L.close==null&&!L.closeTouched){SMB.info='判断关单原因：'+(c.v.s_user||'');renderPend();try{await autoClose(c)}catch(e){}}}
-    saveLocal();SMB.rows=rows;SMB.scanned=1;SMB.info=rows.length?'找到你的 '+rows.length+' 张还没写进展的单':'当前视图里没有你创建的、还没写进展的单';
+    saveLocal();SMB.rows=rows;SMB.open=open;SMB.scanned=1;SMB.info=rows.length?'找到你的 '+rows.length+' 张还没写进展的单':'当前视图里没有你创建的、还没写进展的单';
   }catch(e){SMB.info='';fail('找单失败：'+(e.message||e))}
   SMB.scan=0;renderPend();
 }
@@ -368,12 +370,28 @@ async function smWrite(rid,L){
   if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
   return done;
 }
+const openLeft=()=>SMB.open.filter(c=>!c.fxDone&&!(c.done&&c.L.close!=null&&CLOSE[c.L.close].act));
+async function runFix(){
+  if(SMB.fx)return;SMB.fx=1;SMB.fxMsg={};
+  const list=openLeft().filter(c=>c.fx.close!==''||c.fx.note.trim());renderPend();
+  for(const c of list){
+    try{
+      const done=[],cl=c.fx.close!==''?CLOSE[+c.fx.close]:null;
+      if(c.fx.note.trim()&&F.s_prog){const old=(await table.getCellString(F.s_prog.id,c.rid))||'';const note=today()+' '+CFG.me+'：'+c.fx.note.trim();await writeVal(F.s_prog,note+(old?'\n'+old:''),c.rid);done.push('进展')}
+      if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,c.rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
+      if(cl&&cl.act){c.fxDone=1;c.L.close=+c.fx.close;c.L.closeTouched=1}
+      try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}c.fx.note='';SMB.fxMsg[c.rid]='✓ '+(done.join('、')||'没有要写的');
+    }catch(e){SMB.fxMsg[c.rid]='✕ '+(e.message||String(e))}
+    renderPend();
+  }
+  saveLocal();SMB.fx=0;renderPend();
+}
 async function runSM(){
   if(SMB.run)return;SMB.run=1;SMB.msg={};
   const list=SMB.rows.filter(c=>!SMB.off[c.rid]&&!c.done);SMB.total=list.length;renderPend();
   for(const c of list){
     SMB.msg[c.rid]='写入中…';renderPend();
-    try{const done=await smWrite(c.rid,c.L);c.done=1;const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='✓ '+done.join('、')}
+    try{const done=await smWrite(c.rid,c.L);c.done=1;try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='✓ '+done.join('、')}
     catch(e){SMB.msg[c.rid]='✕ '+(e.message||String(e))}
     renderPend();
   }
@@ -521,6 +539,11 @@ function renderPend(){
    ${rows.map(c=>{const L=c.L,m=SMB.msg[c.rid];return `<div class="li">${c.done?'<span style="width:16px;text-align:center;color:var(--ok)">✓</span>':`<input type="checkbox" data-ssel="${c.rid}" ${SMB.off[c.rid]?'':'checked'} ${SMB.run?'disabled':''}>`}<span class="t"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc((L.models||[])[0]||'')}</span>${chip(L)}<br><span class="s" style="color:${m?(m.startsWith('✓')?'var(--ok)':m.startsWith('✕')?'var(--red)':'var(--mute)'):'var(--mute)'}">${esc(m||noteText({L}))}</span></span><button class="lk" data-sopen="${c.rid}" ${SMB.run?'disabled':''}>改</button></div>`}).join('')}
    ${ps.length&&SMB.scanned&&!sel.length&&!PEND.run&&!SMB.run?`<button id="pendGo" style="width:100%;margin-top:8px">清博录的还有 ${ps.length} 条没在当前视图找到，按链接再找一次</button>`:''}
    ${ps.map(([k,L])=>PEND.msg[k]?`<div class="li"><span class="t"><b>${esc(L.user||'')}</b><br><span class="s" style="color:${PEND.msg[k].startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(PEND.msg[k])}</span></span></div>`:'').join('')}
+   ${SMB.scanned&&!sel.length&&!SMB.run&&!PEND.run?(()=>{const ol=openLeft();return ol.length?`<div style="margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><b style="font-size:14px">还没关单的（${ol.length}）</b><p class="hint" style="margin:2px 0 6px">这些单插件判断不了或还不能关。有新情况的，选关单原因或补一句进展，再点下面的按钮写入；还在等的不用动。</p>
+    ${ol.map(c=>{const m=SMB.fxMsg[c.rid],last=(c.v.s_prog||'').split('\n')[0];return `<div class="li" style="display:block"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute);font-size:12px">${esc(c.v.s_case||'')} ${esc(formPri(c.L.pri)||'')}</span>${c.L.closeAi&&!c.L.closeTouched?`<br><span class="s" style="color:var(--mute)">AI：${esc(c.L.closeAi)}</span>`:''}${last?`<br><span class="s" style="color:var(--mute)">最新进展：${esc(last.slice(0,60))}</span>`:''}
+     <select data-fxc="${c.rid}" style="margin-top:6px" ${SMB.fx?'disabled':''}><option value="">先不关单</option>${CLOSE.map((x,i)=>x.act?`<option value="${i}" ${String(c.fx.close)===String(i)?'selected':''}>${esc(x.q)} → ${esc(x.r)}</option>`:'').join('')}</select>
+     <input data-fxn="${c.rid}" value="${esc(c.fx.note)}" placeholder="补一句进展（可不填），如：用户回复已解决" style="margin-top:4px" ${SMB.fx?'disabled':''}>${m?`<span class="s" style="display:block;color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</div>`}).join('')}
+    <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">你的单都处理完了。</div>':'')})():''}
    <details id="sMore" style="margin-top:8px" ${moreOpen?'open':''}><summary class="hint" style="font-weight:400">更多选项</summary>
     <p class="hint" style="margin:8px 0 4px">默认写的进展（没单独改过的单都用这个，改完点「重新找」生效）：</p>
     <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
@@ -625,7 +648,7 @@ async function writeBack(c=cur,quiet){
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'||t.id==='bScan2'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderPend();return}if(t.dataset.bopen){e.preventDefault();$('mainBox').open=true;await loadRecord(t.dataset.bopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='bGo'){clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){await syncAll();return}if(t.id==='sScan'||t.id==='sScan2'){clearErr();if(t.id==='sScan2')for(const c of SMB.rows)if(!c.done&&!c.L.noteTouched){c.L.acts=[];c.L.extra=''}await scanSM();return}if(t.id==='sGo'){clearErr();await runSM();return}if(t.dataset.sopen){$('mainBox').open=true;await loadSM(t.dataset.sopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();$('mainBox').open=true;await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'||t.id==='bScan2'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderPend();return}if(t.dataset.bopen){e.preventDefault();$('mainBox').open=true;await loadRecord(t.dataset.bopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='bGo'){clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){await syncAll();return}if(t.id==='sScan'||t.id==='sScan2'){clearErr();if(t.id==='sScan2')for(const c of SMB.rows)if(!c.done&&!c.L.noteTouched){c.L.acts=[];c.L.extra=''}await scanSM();return}if(t.id==='sGo'){clearErr();await runSM();return}if(t.id==='fxGo'){clearErr();await runFix();return}if(t.dataset.sopen){$('mainBox').open=true;await loadSM(t.dataset.sopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();$('mainBox').open=true;await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
@@ -648,6 +671,7 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='bExtra'){bdef().extra=e.target.value.trim();saveCfg();return}
+  if(e.target.dataset.fxn){const c=SMB.open.find(x=>x.rid===e.target.dataset.fxn);if(c){c.fx.note=e.target.value;const b=$('fxGo');if(b)b.disabled=SMB.fx||!openLeft().some(x=>x.fx.close!==''||x.fx.note.trim())}return}
   if(e.target.dataset.fm){CFG.fmap[e.target.dataset.fm]=e.target.value.trim();saveCfg();return}
   if(!cur)return;const L=cur.L,id=e.target.id;
   if(id==='desc'){cur.desc=e.target.value}
@@ -658,7 +682,7 @@ document.addEventListener('input',e=>{
   saveLocal();const n=$('note');if(n)n.textContent=noteText(cur);
 });
 document.addEventListener('change',e=>{
-  {const t=e.target;if(t.dataset.bfacc){CFG.faccDef=CFG.faccDef||{};CFG.faccDef[t.dataset.bfacc]=t.value;saveCfg();renderBatch();return}if(t.id==='bWait'){bdef().wait=t.value;saveCfg();return}if(t.dataset.bsel){BATCH.off[t.dataset.bsel]=!t.checked;renderBatch();return}if(t.dataset.ssel){SMB.off[t.dataset.ssel]=!t.checked;renderPend();return}}
+  {const t=e.target;if(t.dataset.bfacc){CFG.faccDef=CFG.faccDef||{};CFG.faccDef[t.dataset.bfacc]=t.value;saveCfg();renderBatch();return}if(t.id==='bWait'){bdef().wait=t.value;saveCfg();return}if(t.dataset.bsel){BATCH.off[t.dataset.bsel]=!t.checked;renderBatch();return}if(t.dataset.ssel){SMB.off[t.dataset.ssel]=!t.checked;renderPend();return}if(t.dataset.fxc){const c=SMB.open.find(x=>x.rid===t.dataset.fxc);if(c){c.fx.close=t.value;renderPend()}return}}
   if(!cur)return;const L=cur.L,t=e.target;
   if(t.dataset.w){L['w_'+t.dataset.w]=t.checked;saveLocal()}
   else if(t.id==='acc'){const a=t.value.trim(),p=platOf(cur);if(a){CFG.accs=CFG.accs||{};const l=(CFG.accs[p]||[]).filter(x=>x!==a);l.unshift(a);CFG.accs[p]=l.slice(0,6);saveCfg()}render()}
