@@ -44,25 +44,28 @@ details summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <div class="wrap">
-  <div class="row" style="justify-content:space-between"><b style="font-size:16px">录单助手</b><span class="chip" id="conn">连接中…</span></div>
+  <div class="row" style="justify-content:space-between"><b style="font-size:16px">录单助手 <span id="ver" style="font-size:11px;font-weight:400;color:var(--mute)"></span></b><span class="chip" id="conn">连接中…</span></div>
 
   <details class="card" id="setBox">
     <summary>设置</summary>
     <div style="display:grid;gap:8px;margin-top:8px">
-      <label>进展署名<input id="me" placeholder="如：子恒"></label>
+      <div class="ok" id="firstTip" style="display:none;margin:0">第一次用，三步就好：① 填署名 ② 装桥接扩展 ③ 粘 Key 点「连接」。不用 AI 的话只做第 ① 步也行。</div>
+      <label><b style="font-size:13px;color:var(--ink)">① 进展署名</b>（写进展时用，如「11.20 子恒：…」）<input id="me" placeholder="如：子恒"></label>
+      <b style="font-size:13px">② 装桥接扩展</b>
+      <p class="hint" style="margin:0">AI 判断（自动给优先级、型号、简述）要用它。下载并解压 → Chrome 地址栏打开 chrome://extensions → 打开右上角「开发者模式」→ 点「加载未打包的扩展程序」选解压出的文件夹 → 回来刷新本页。</p>
+      <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
+      <label><b style="font-size:13px;color:var(--ink)">③ AI Key</b>（公司 AI 网关里自己建的 Key，只存在你的浏览器里）<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
+      <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「连接」</option></select><button id="aiModels">连接</button></div>
+      <span class="chip" id="aiState">未连接</span>
+      <button class="primary" id="setDone">设置好了，收起</button>
+      <details id="adv"><summary class="hint">高级设置（一般不用动）</summary><div style="display:grid;gap:8px;margin-top:8px">
+      <label class="row" style="font-size:13px"><input type="checkbox" id="autoAi" style="width:auto"> 点选一行时自动 AI 判断</label>
       <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> 实习生规则（P0/P1 不录单）</label>
+      <label>AI 服务<select id="aiProv"><option value="https://ai-gateway.insta360.cn/v1">公司网关（默认）</option><option value="custom">自定义地址</option></select></label>
+      <label id="aiBaseWrap" style="display:none">AI 地址<input id="aiBase" placeholder="https://xxx/v1"></label>
       <p class="hint" style="margin:0">字段名（按包含匹配，表头改名了在这里改）</p>
       <div id="fmap" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px"></div>
       <button id="reload">重新读取字段</button>
-      <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
-      <b style="font-size:13px">AI 判断（可选）</b>
-      <p class="hint" style="margin:0">用 AI 自动判断优先级、产品型号、写简述。需要先装「录单助手桥接」Chrome 扩展（解决浏览器跨域）。</p>
-      <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
-      <label>AI 服务<select id="aiProv"><option value="https://ai-gateway.insta360.cn/v1">公司网关（默认）</option><option value="custom">自定义地址</option></select></label>
-      <label id="aiBaseWrap" style="display:none">AI 地址<input id="aiBase" placeholder="https://xxx/v1"></label>
-      <label>AI Key<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
-      <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「获取模型」</option></select><button id="aiModels">获取模型</button></div>
-      <span class="chip" id="aiState">未连接</span>
       <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
       <b style="font-size:13px">飞书后端 API（可选）</b>
       <p class="hint" style="margin:0">填了就能全自动：直接建单（含截图、型号）、首回、写进展、关单。公司的或自己搭的都行，只存在你自己浏览器里。</p>
@@ -77,9 +80,11 @@ POST /tickets/{no}/progress {note}
 POST /tickets/{no}/close {reason,user_replied}
 POST /tickets/{no}/terminate {reason}
 出错返回 {error}，Key 失效 401；需允许跨域（CORS）</div></details>
+      </div></details>
     </div>
   </details>
 
+  <div class="alert" id="err" style="display:none;margin:0"><span id="errT"></span> <button id="errX" style="min-height:22px;padding:0 8px;font-size:12px;float:right">知道了</button></div>
   <div id="main"><div class="card empty">在表格里点选一行（任意单元格）。清博表里显示录单面板，社媒帖处理系统里显示进展和关单面板。</div></div>
 </div>
 <div class="toast" id="toast"></div>
@@ -110,6 +115,9 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const VER='1.6';
+const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
+const clearErr=()=>{$('err').style.display='none'};
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)};
 const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('已复制')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('已复制')}catch(_){toast('复制失败，请手动复制')}a.remove()}};
 const today=()=>{const d=new Date();return (d.getMonth()+1)+'.'+String(d.getDate()).padStart(2,'0')};
@@ -135,7 +143,7 @@ async function call(method,path,body){
   return j;
 }
 const normLink=u=>{try{const x=new URL(u);return (x.host+x.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return (u||'').trim().toLowerCase()}};
-let MODE='',SHOT='';
+let MODE='',SHOT='';const BUSY=new Set();
 const AI={base:'https://ai-gateway.insta360.cn/v1',key:'',model:''};
 try{Object.assign(AI,JSON.parse(localStorage.getItem('qbai')||'{}'))}catch(e){}
 const saveAi=()=>{try{localStorage.setItem('qbai',JSON.stringify(AI))}catch(e){}};
@@ -189,6 +197,7 @@ async function loadRecord(rid){
   if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
   if(o.link){LOCAL._links=LOCAL._links||{};LOCAL._links[normLink(o.link)]=rid;saveLocal()}
   render();
+  if(CFG.autoAi!==false&&aiReady()&&!L.ai){const me=cur;setTimeout(()=>{if(cur===me)runAi()},700)}
 }
 
 const noteText=c=>{const L=c.L,p=[];if(L.acc)p.push(L.acc+(L.acts.includes('已评论回复')?'回复':''));p.push(...L.acts.filter(a=>!(L.acc&&a==='已评论回复')));if(L.wait&&L.wait!=='无需等待')p.push(L.wait);if(L.extra)p.push(L.extra);return today()+' '+(CFG.me||'我')+'：'+p.join('，')};
@@ -220,9 +229,9 @@ function render(){
   </div>
 
   <div class="card"><h2><span class="n">2</span>打标</h2>
-   <div class="row" style="justify-content:space-between"><h3 style="margin:0">优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，'+(L.ai?'AI':'关键词')+'建议 '+sp:'')}</h3>${aiReady()?`<button id="aiRun" style="min-height:28px">${L.aiBusy?'AI 判断中…':'AI 判断'}</button>`:''}</div>
+   <div class="row" style="justify-content:space-between"><h3 style="margin:0">优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，'+(L.ai?'AI':'关键词')+'建议 '+sp:'')}</h3>${aiReady()?`<button id="aiRun" style="min-height:28px">${BUSY.has(c.rid)?'AI 判断中…':(L.ai?'重新判断':'AI 判断')}</button>`:''}</div>
    ${L.ai?`<div class="ok" style="margin-top:6px">AI：${esc(L.ai.pri)} · ${esc((L.ai.models||[]).join('、')||'无型号')}<br>${esc(L.ai.why||'')}${L.ai.desc?`<br>简述：${esc(L.ai.desc)} <button id="aiDesc" style="min-height:24px;font-size:12px;padding:0 8px">用这个简述</button>`:''}${qbPri&&formPri(qbPri)!==formPri(L.ai.pri)?'<br>⚠️ 和清博分级不一致，按清博为准，有疑问问老师':''}</div>`:''}
-   <div class="seg">${priOpts().map(p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p?'sug':''}">${esc(p)}</button>`).join('')}</div>
+   ${(()=>{const all=priOpts(),isMain=p=>/^(无需回复|P[0-3](技术|预期)?)$/.test(p),btn=p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p&&isMain(p)?'sug':''}">${esc(p)}</button>`,ord=['P0','P1','P2','P2技术','P2预期','P3','无需回复'],main=all.filter(isMain).sort((a,b)=>ord.indexOf(a)-ord.indexOf(b)),rest=all.filter(p=>!isMain(p));return `<div class="seg" style="margin-top:6px">${main.map(btn).join('')}</div>`+(rest.length?`<details style="margin-top:6px" ${rest.includes(L.pri)?'open':''}><summary class="hint" style="font-weight:400">更多标签（${rest.length}）</summary><div class="seg" style="margin-top:6px">${rest.map(btn).join('')}</div></details>`:'')})()}
    ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
    ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
    <h3>产品型号（第一个用于转 FAE）</h3>
@@ -234,8 +243,13 @@ function render(){
   <div class="card"><h2><span class="n">3</span>录单</h2>
    ${blocked||noRec?'<p class="hint">这条不录单。</p>':`
    <div class="row"><a class="btn primary" href="${esc(formUrl(c))}" target="_blank" rel="noopener">打开预填表单 ↗</a><button data-copy="model" ${L.models.length?'':'disabled'}>复制型号</button></div>
-   <p class="hint">已带入：用户名、类型、渠道、时间、链接、简述${fp?'、优先级 '+fp:''}${fl?'、粉丝档位':''}。表单里还要：${fp?'':'选优先级、'}${fl?'':'选粉丝档位、'}粘截图、选型号。</p>
-   <h3>提交后填社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">
+   <ol class="hint" style="padding-left:18px;margin:8px 0 0;line-height:1.8">
+    <li>点「打开预填表单」：用户名、渠道、时间、链接、简述${fp?'、优先级':''}${fl?'、粉丝档位':''}已填好${fp?'':'（<b>优先级要自己选</b>）'}${fl?'':'（<b>粉丝档位要自己选</b>）'}</li>
+    <li>截图：打开原帖，按 ⌘+Ctrl+Shift+4 框选帖子，回表单点截图框按 ⌘V</li>
+    <li>产品型号：点「复制型号」，在表单的型号框里搜${L.models.length?'「'+esc(L.models[0])+'」':''}选上</li>
+    <li>提交表单，把社媒单号填到下面，再点第 4 步「回写」</li>
+   </ol>
+   <h3>社媒单号</h3><input id="tk" value="${esc(L.ticket)}" placeholder="如 20261120SM12xxxx">
    ${API.ok?`<h3>API 全自动建单</h3><div id="shotBox" tabindex="0" style="border:1px dashed var(--line);border-radius:6px;padding:10px;text-align:center;font-size:13px;color:var(--mute);cursor:text">${SHOT?'<img src="'+SHOT+'" style="max-width:100%;max-height:140px">':'点这里后 ⌘V 粘贴帖子截图（⌘+Ctrl+Shift+4 截图）'}</div>
    <button class="primary" id="apiCreate" style="width:100%;margin-top:6px" ${L.ticket?'disabled':''}>${L.ticket?'已建单 '+esc(L.ticket):'一键建单 + 回写清博'}</button>`:'<p class="hint">在设置里填好 API，就能连截图一起一键建单。</p>'}`}
   </div>
@@ -265,6 +279,11 @@ function render(){
   </div>`;
 }
 
+async function runAi(){
+  const c=cur;if(!c||c.sm||BUSY.has(c.rid))return;const L=c.L;BUSY.add(c.rid);if(cur===c)render();
+  try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(c.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){if(cur===c)fail('AI 判断失败：'+e.message)}
+  BUSY.delete(c.rid);saveLocal();if(cur===c)render();
+}
 async function loadSM(rid){
   const v={};for(const k of ['s_case','s_user','s_link','s_status','s_prog','s_reason','s_replied','pri'])v[k]=await cell(k,rid);
   const key='sm:'+rid;
@@ -312,7 +331,7 @@ async function writeSM(kind){
       }
     }
   }catch(e){err.push(e.message||String(e))}
-  toast(done.length?'已写：'+done.join('、'):'没有写入');if(err.length)setTimeout(()=>toast(err.join('；')),1900);
+  toast(done.length?'已写：'+done.join('、'):'没有写入');if(err.length)fail(err.join('；'));
   await loadSM(c.rid);
 }
 async function writeVal(f,val){
@@ -340,12 +359,12 @@ async function writeBack(){
   if(F.note&&L.w_note===true&&L.ticket)plan.push([F.note,((c.v.note?c.v.note+' ':'')+'社媒单号 '+L.ticket)]);
   for(const[f,val]of plan){try{await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
   toast(done.length?'已写：'+done.join('、'):'没有写入');
-  if(err.length)setTimeout(()=>toast(err.join('；')),1900);
+  if(err.length)fail(err.join('；'));
   await loadRecord(c.rid);
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t||!cur)return;const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
@@ -353,14 +372,14 @@ document.addEventListener('click',async e=>{
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
   else if(t.dataset.copy==='reason')copy(CLOSE[L.close].r);
-  else if(t.id==='aiRun'){if(L.aiBusy)return;L.aiBusy=1;render();try{const a=await aiJudge(cur);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(cur.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){toast(e.message)}L.aiBusy=0;saveLocal();render()}
+  else if(t.id==='aiRun'){runAi()}
   else if(t.id==='aiDesc'){cur.desc=L.ai.desc;render()}
   else if(t.id==='smNote'||t.id==='smClose'){const k=t.id==='smNote'?'note':'close';if(L.arm!==k){L.arm=k;renderSM();setTimeout(()=>{if(cur&&cur.L===L&&L.arm===k){L.arm='';renderSM()}},5000);return}L.arm='';if(busy)return;busy=true;try{await writeSM(k)}finally{busy=false}}
   else if(t.id==='apiCreate'){if(!L.models.length){toast('先选产品型号');return}if(!formPri(L.pri)){toast('先打优先级');return}if(!SHOT&&!confirmShot){confirmShot=1;toast('还没粘截图，再点一次就不带截图建单');return}confirmShot=0;t.disabled=true;
-    try{const j=await call('POST','/tickets',{user:cur.o.user,type:cur.o.type,plat:cur.o.plat,time:cur.o.time,link:cur.o.link,desc:cur.desc,fan_level:fanBucket(cur.fans)||cur.o.fan||'',pri:formPri(L.pri),models:L.models,screenshot_base64:SHOT||undefined});L.ticket=j.ticket_no||'';saveLocal();L.w_note=true;await writeBack();toast('已建单 '+L.ticket+' 并回写清博')}catch(e){t.disabled=false;toast(e.message)}}
-  else if(t.id==='apiNote'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/progress',{note:noteText(cur)});toast('进展已写入');loadSM(cur.rid)}catch(e){toast(e.message)}}
-  else if(t.id==='apiFirst'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/first-reply');toast('已完成首回');loadSM(cur.rid)}catch(e){toast(e.message)}}
-  else if(t.id==='apiClose'){const cl=CLOSE[L.close];try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/close',{reason:cl.r,user_replied:cl.u});toast('已关单');loadSM(cur.rid)}catch(e){toast(e.message)}}
+    try{const j=await call('POST','/tickets',{user:cur.o.user,type:cur.o.type,plat:cur.o.plat,time:cur.o.time,link:cur.o.link,desc:cur.desc,fan_level:fanBucket(cur.fans)||cur.o.fan||'',pri:formPri(L.pri),models:L.models,screenshot_base64:SHOT||undefined});L.ticket=j.ticket_no||'';saveLocal();L.w_note=true;await writeBack();toast('已建单 '+L.ticket+' 并回写清博')}catch(e){t.disabled=false;fail(e.message)}}
+  else if(t.id==='apiNote'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/progress',{note:noteText(cur)});toast('进展已写入');loadSM(cur.rid)}catch(e){fail(e.message)}}
+  else if(t.id==='apiFirst'){try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/first-reply');toast('已完成首回');loadSM(cur.rid)}catch(e){fail(e.message)}}
+  else if(t.id==='apiClose'){const cl=CLOSE[L.close];try{await call('POST','/tickets/'+encodeURIComponent(cur.v.s_case)+'/close',{reason:cl.r,user_replied:cl.u});toast('已关单');loadSM(cur.rid)}catch(e){fail(e.message)}}
   else if(t.id==='wb'){if(busy)return;if(!L.wbArm){L.wbArm=1;render();setTimeout(()=>{if(cur&&cur.L===L&&L.wbArm){L.wbArm=0;render()}},5000);return}L.wbArm=0;busy=true;t.disabled=true;try{await writeBack()}finally{busy=false}}
 });
 document.addEventListener('input',e=>{
@@ -387,6 +406,10 @@ document.addEventListener('paste',e=>{
   e.preventDefault();const fr=new FileReader();fr.onload=()=>{SHOT=fr.result;render();toast('截图已粘贴')};fr.readAsDataURL(it.getAsFile());
 });
 document.addEventListener('keydown',e=>{if(e.target.id==='mS'&&e.key==='Enter'&&cur){const v=e.target.value.trim();if(v&&!cur.L.models.includes(v)){cur.L.models.push(v);saveLocal();render();$('mS').focus()}}});
+$('ver').textContent='v'+VER;
+$('autoAi').checked=CFG.autoAi!==false;$('autoAi').onchange=e=>{CFG.autoAi=e.target.checked;saveCfg()};
+if(!CFG.done){$('setBox').open=true;$('firstTip').style.display=''}
+$('setDone').onclick=()=>{if(!CFG.me){fail('先填一下进展署名');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
 $('me').value=CFG.me;$('intern').checked=CFG.intern;
 $('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
 $('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
@@ -394,19 +417,19 @@ $('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toas
 document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
 
 const isCo=AI.base==='https://ai-gateway.insta360.cn/v1';$('aiProv').value=isCo?AI.base:'custom';$('aiBaseWrap').style.display=isCo?'none':'';$('aiBase').value=AI.base;$('aiKey').value=AI.key||'';
-const fillModels=list=>{$('aiModel').innerHTML=(list.length?list:[AI.model].filter(Boolean)).map(m=>`<option ${m===AI.model?'selected':''}>${esc(m)}</option>`).join('')||'<option value="">先点「获取模型」</option>'};
+const fillModels=list=>{$('aiModel').innerHTML=(list.length?list:[AI.model].filter(Boolean)).map(m=>`<option ${m===AI.model?'selected':''}>${esc(m)}</option>`).join('')||'<option value="">先点「连接」</option>'};
 fillModels(AI.model?[AI.model]:[]);
 const aiSt=(ok,t)=>{$('aiState').textContent=t;$('aiState').className='chip '+(ok?'g':(ok===false?'r':''))};
 $('aiProv').onchange=e=>{if(e.target.value==='custom'){$('aiBaseWrap').style.display=''}else{$('aiBaseWrap').style.display='none';AI.base=e.target.value;$('aiBase').value=AI.base;saveAi()}};
 $('aiBase').oninput=e=>{AI.base=e.target.value.trim();saveAi()};
 $('aiKey').oninput=e=>{AI.key=e.target.value.trim();saveAi();aiSt(null,'未连接')};
 $('aiModel').onchange=e=>{AI.model=e.target.value;saveAi();if(cur)render()};
-$('aiModels').onclick=async()=>{try{const j=await aiCall('/models');const list=(j.data||[]).map(x=>x.id).sort();if(!list.length)throw new Error('没拿到模型列表');if(!list.includes(AI.model))AI.model=list.find(m=>/mini|haiku|flash|lite/i.test(m))||list[0];saveAi();fillModels(list);aiSt(true,'已连接 · '+list.length+' 个模型');if(cur)render()}catch(e){aiSt(false,'连接失败');toast(e.message)}};
+$('aiModels').onclick=async()=>{try{const j=await aiCall('/models');const list=(j.data||[]).map(x=>x.id).sort();if(!list.length)throw new Error('没拿到模型列表');if(!list.includes(AI.model))AI.model=list.find(m=>/mini|haiku|flash|lite/i.test(m))||list[0];saveAi();fillModels(list);aiSt(true,'已连接 · '+list.length+' 个模型');if(cur)render()}catch(e){aiSt(false,'连接失败');fail(e.message)}};
 window.postMessage({type:'QB_BRIDGE_PING'},location.origin);
 setTimeout(()=>{if(!BR){const el=$('brState');el.textContent='桥接扩展：未安装';el.className='chip r'}},1500);
 $('apiBase').value=API.base||'';$('apiKey').value=API.key||'';
 ['apiBase','apiKey'].forEach(id=>$(id).oninput=e=>{API[id==='apiBase'?'base':'key']=e.target.value.trim();API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip';saveApi()});
-$('apiTest').onclick=async()=>{try{const j=await call('GET','/health');API.ok=true;$('apiState').textContent='已连接'+(j.user?' · '+j.user:'');$('apiState').className='chip g';if(cur)render()}catch(e){API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip r';toast(e.message)}};
+$('apiTest').onclick=async()=>{try{const j=await call('GET','/health');API.ok=true;$('apiState').textContent='已连接'+(j.user?' · '+j.user:'');$('apiState').className='chip g';if(cur)render()}catch(e){API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip r';fail(e.message)}};
 $('apiClear').onclick=()=>{API.key='';API.ok=false;$('apiKey').value='';saveApi();$('apiState').textContent='未连接';$('apiState').className='chip';if(cur)render();toast('已清除')};
 if(API.base&&API.key)$('apiTest').onclick();
 (async()=>{
