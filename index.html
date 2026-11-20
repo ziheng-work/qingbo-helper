@@ -94,8 +94,8 @@ POST /tickets/{no}/terminate {reason}
 <script>
 {
 const {bitable,FieldType}=window.LBS||{};
-const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
-const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
+const DEF={url:'录单URL',fans:'粉丝数',title:'标题',pri:'优先级',reg:'是否已登记',date:'回复日期',handler:'社媒处理人',prog:'处理进展',note:'备注',qmodel:'产品型号',qdesc:'帖子简述',qshot:'帖子截图',s_case:'案例编号',s_user:'用户名',s_link:'帖子链接',s_status:'社媒支持流程',s_prog:'当前进展',s_reason:'关单原因（社媒支持）',s_replied:'用户是否回复'};
+const LBL={url:'清博·录单URL',fans:'清博·粉丝数',title:'清博·标题',pri:'优先级',reg:'清博·是否已登记',date:'清博·回复日期',handler:'清博·社媒处理人',prog:'清博·处理进展',note:'清博·备注',qmodel:'清博·产品型号',qdesc:'清博·帖子简述',qshot:'清博·帖子截图',s_case:'社媒·案例编号',s_user:'社媒·用户名',s_link:'社媒·帖子链接',s_status:'社媒·状态',s_prog:'社媒·当前进展',s_reason:'社媒·关单原因',s_replied:'社媒·用户是否回复'};
 const K={user:'用户名/ User ID',type:'帖子类型/Post Type',plat:'具体渠道/Platforms',time:'发帖时间 / PostTime',pri:'优先级/Priority',link:'帖子链接/ Post Link',desc:'帖子简述/Post Description',fan:'博主粉丝量/ Fan Number'};
 const FANS=[[1e6,'粉丝量≧100万'],[1e5,'10万≦粉丝量<100万'],[2000,'2000≦粉丝量<10万'],[1000,'1000≦粉丝量<2000'],[300,'300≦粉丝量<1000'],[0,'粉丝量<300']];
 const MODELS=['X5','X4','X4 Air','X6','X3','ONE X2','ONE RS 一英寸','ONE RS','全景线-其他','Ace Pro 2','Ace Pro','Ace','Ace系列-其他','GO Ultra','GO 3S','GO 3','GO 2','GO系列-其他','Flow 2 Pro','Flow 2','Flow Pro','Flow','Flow系列-其他','Link 2C','Link 2','Link','Luna Ultra','Luna Pro','Snap','Wave','Connect','Mic Air','Mic Pro','Mic','Titan','Pro 2','Insta360 APP-苹果','Insta360 APP-安卓','Insta360 APP-鸿蒙','Insta360 APP-不确定','Studio-Windows','Studio-Mac','Studio-不确定','自拍杆系列','支架类','其他保护镜','其他通用配件','相机/云台-其他','软件-其他'];
@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.19';
+const VER='1.20';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -212,6 +212,8 @@ async function loadRecord(rid){
   cur={rid,v,o,L,qm,desc:(qd&&qd!=='-'&&qd!=='/'?qd:'')||o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
   if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
   if(o.link){LOCAL._links=LOCAL._links||{};LOCAL._links[normLink(o.link)]=rid;L.link=o.link;L.user=o.user||'';saveLocal()}
+  cur.shots=[];
+  if(F.qshot){try{const val=await table.getCellValue(F.qshot.id,rid);const att=Array.isArray(val)?val.filter(a=>a&&a.token):[];if(att.length){let urls=[];try{urls=await table.getCellAttachmentUrls(att.map(a=>a.token),F.qshot.id,rid)}catch(e){try{urls=await table.getCellAttachmentUrls(F.qshot.id,rid)}catch(_){}}cur.shots=att.map((a,i)=>({name:a.name,type:a.type,url:urls[i]||''}))}}catch(e){cur.shotErr=String(e&&e.message||e)}}
   render();
   if(CFG.autoAi!==false&&aiReady()&&!L.ai){const me=cur;setTimeout(()=>{if(cur===me)runAi()},700)}
 }
@@ -241,6 +243,7 @@ function render(){
    <dl class="kv"><dt>用户名</dt><dd>${esc(c.o.user||'—')}</dd><dt>渠道</dt><dd>${esc(c.o.plat||'—')} · ${esc(c.o.type||'')}</dd><dt>时间</dt><dd>${esc(c.o.time||'—')}</dd><dt>粉丝</dt><dd>${esc(c.fans||'—')} ${fl?'<span class="chip">'+esc(fl)+'</span>':''}</dd><dt>状态</dt><dd>${v.reg?'<span class="chip">已登记:'+esc(v.reg)+'</span> ':''}${v.prog?'<span class="chip g">'+esc(v.prog)+'</span> ':''}${taken?'<span class="chip">处理人:'+esc(v.handler)+'</span>':''}</dd></dl>
    <h3>帖子简述（要写清具体问题）</h3><textarea id="desc">${esc(c.desc)}</textarea>
    ${c.o.link?`<p class="hint"><a href="${esc(c.o.link)}" target="_blank" rel="noopener">打开原帖 ↗</a>（截图截帖子本身）</p>`:''}
+   ${c.shots&&c.shots.length?`<p class="hint" style="margin-bottom:4px">清博已有帖子截图 ${c.shots.length} 张：</p><div class="row">${c.shots.map(x=>x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener"><img src="${esc(x.url)}" style="max-width:96px;max-height:96px;border:1px solid var(--line);border-radius:4px"></a>`:`<span class="chip">${esc(x.name)}</span>`).join('')}</div>`:(F.qshot?'<p class="hint">清博这条没有帖子截图。</p>':'')}
    ${!c.o.base?'<div class="alert">这行的「录单URL」读不到，没法生成预填表单。</div>':''}
    ${taken?'<div class="alert">这条已经有社媒处理人，先确认不是别人在处理，避免重复录单。</div>':''}
   </div>
