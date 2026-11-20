@@ -38,6 +38,8 @@ button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible
 .wb input[type=checkbox]{width:auto;margin-top:3px}
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 details summary{cursor:pointer;font-weight:600}
+.big{width:100%;min-height:48px;font-size:16px;border-radius:8px}
+.li{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.li input{width:auto;margin-top:3px}.li .t{flex:1}.li .s{font-size:12px}.lk{min-height:22px;padding:0 6px;font-size:12px;font-weight:500;border:0;color:var(--blue);background:none}
 .toast{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
 .toast.show{opacity:1}
 </style>
@@ -86,7 +88,7 @@ POST /tickets/{no}/terminate {reason}
 
   <div class="alert" id="err" style="display:none;margin:0"><span id="errT"></span> <button id="errX" style="min-height:22px;padding:0 8px;font-size:12px;float:right">知道了</button></div>
   <div id="pend"></div>
-  <div id="main"><div class="card empty">在表格里点选一行（任意单元格）。清博表里显示录单面板，社媒帖处理系统里显示进展和关单面板。</div></div>
+  <details id="mainBox"><summary class="hint" style="font-weight:400;margin:0 2px 8px">单条处理 / 修改某一条（在表格里点一行）</summary><div id="main" style="display:grid;gap:10px"><div class="card empty">在表格里点选一行。</div></div></details>
 </div>
 <p class="hint" style="text-align:center;margin:4px 0 12px"><a href="https://ziheng-work.github.io/qingbo-helper/guide.html" target="_blank" rel="noopener">使用教程（图示）</a>　·　开发：曾子恒 Ziheng Zeng</p>
 <div class="toast" id="toast"></div>
@@ -126,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.33';
+const VER='1.34';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -366,7 +368,7 @@ async function findTicket(no,link){
 let PEND={arm:0,msg:{},run:0};
 const reloadLocal=()=>{if(MODE!=='sm'||PEND.run)return;try{const n=JSON.parse(localStorage.getItem('qblocal')||'{}');for(const k in n)if(!k.startsWith('sm:'))LOCAL[k]=n[k]}catch(e){}renderPend()};
 window.addEventListener('storage',e=>{if(e.key==='qblocal')reloadLocal()});window.addEventListener('focus',reloadLocal);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reloadLocal()});
-const BATCH={rows:[],scan:0,run:0,arm:0,msg:{},off:{},info:''};
+const BATCH={rows:[],scan:0,run:0,arm:0,msg:{},off:{},info:'',scanned:0,total:0};
 const bdef=()=>CFG.bdef||(CFG.bdef={acts:['已评论回复'],wait:''});
 const isReg=v=>{const r=(v.reg||'').trim();return !!r&&!/^(否|未|false|0|-)/i.test(r)};
 function rowState(c){
@@ -397,7 +399,7 @@ async function scanBatch(){
     const rows=[];for(const id of mine){const c=await buildCtx(id);if(isReg(c.v)&&!c.L.submitted)continue;if(c.L.submitted&&c.L.wbDone&&c.L.wbDone>=c.L.submitted&&Date.now()-c.L.submitted>12*3600e3)continue;rows.push(c)}
     if(aiReady())for(const c of rows){const L=c.L;if(L.ai||(L.pri&&L.models.length)||L.submitted)continue;BATCH.info='AI 判断中：'+(c.o.user||'');renderBatch();try{const a=await aiJudge(c);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!L.pri){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){}}
     for(const c of rows){const L=c.L;if(L.submitted&&L.synced)continue;if(L.close!=null||L.closeTouched)continue;BATCH.info='判断关单原因：'+(c.o.user||'');renderBatch();try{await autoClose(c)}catch(e){}}
-    saveLocal();BATCH.rows=rows;BATCH.info='当前视图 '+ids.length+' 行里，处理人是你、还没登记的有 '+rows.filter(c=>!c.L.submitted).length+' 条';
+    saveLocal();BATCH.rows=rows;BATCH.scanned=1;{const n=rows.filter(c=>rowState(c)[0]==='ok').length;BATCH.info=rows.length?('找到你的 '+rows.length+' 条，可以录 '+n+' 条'):'当前视图里没有处理人是你、还没登记的帖子'}
   }catch(e){BATCH.info='';fail('找单失败：'+(e.message||e))}
   BATCH.scan=0;renderBatch();
 }
@@ -405,21 +407,32 @@ function renderBatch(){
   const el=$('pend');if(!el||MODE!=='qb')return;
   const rows=BATCH.rows,d=bdef(),need=[...new Set(rows.map(c=>formAcc(c)).filter(Boolean).map(f=>f[0]))];
   const st=rows.map(rowState),sel=rows.filter((c,i)=>st[i][0]==='ok'&&!BATCH.off[c.rid]),wbs=rows.filter((c,i)=>st[i][0]==='wb');
-  const brOk=BR&&vge(BRV,'1.3');
-  el.innerHTML=`<div class="card"><h2>批量录单</h2>
-   <p class="hint" style="margin-top:0">一次把「社媒处理人是你、还没登记」的帖子全录好：自动填表单、选型号、放清博截图、提交，再回写清博。先切到今天要处理的视图。</p>
-   <button id="bScan" style="width:100%" ${BATCH.scan||BATCH.run?'disabled':''}>${BATCH.scan?'查找中…':rows.length?'重新找一遍':'找出我今天的单'}</button>
-   ${BATCH.info?`<p class="hint">${esc(BATCH.info)}</p>`:''}
-   ${rows.length?`
-   ${need.map(n=>{const opts=Object.values(FORM_ACC).find(f=>f[0]===n)[1];return `<label style="font-size:13px">${esc(n)}（这批都用）<select data-bfacc="${esc(n)}"><option value="">请选</option>${opts.map(o=>`<option ${CFG.faccDef&&CFG.faccDef[n]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`}).join('')}
-   <p class="hint" style="margin:8px 0 4px">这批帖子你都做了什么（写进社媒系统的「当前进展」）：</p>
-   <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
-   <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
-   <div style="display:grid;gap:4px;margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid];return `<div class="out" style="font-size:12px;margin:0"><label style="display:flex;gap:6px;align-items:flex-start"><input type="checkbox" data-bsel="${c.rid}" style="width:auto;margin-top:2px" ${s==='ok'&&!BATCH.off[c.rid]?'checked':''} ${s==='ok'&&!BATCH.run?'':'disabled'}><span style="flex:1;min-width:0"><b>${esc(c.o.user||'（无用户名）')}</b> · ${esc(c.o.plat||'')} · ${esc(formPri(L.pri)||'未分级')} · ${esc(L.models.join('、')||'无型号')} · ${c.shots.length?'截图'+c.shots.length:'无截图'}<br><span style="color:var(--mute)">${esc((c.desc||'').replace(/\s+/g,' ').slice(0,40))}</span>${closeTxt(L)?`<br><span style="color:var(--blue)">${esc(closeTxt(L))}</span>`:(s==='ok'?'<br><span style="color:var(--mute)">关单原因没判断（没配 AI），只写进展</span>':'')}${why?`<br><b style="color:${s==='done'?'var(--ok)':'var(--red)'}">${esc(why)}</b>`:''}${m?`<br><b>${esc(m)}</b>`:''}</span><button data-bopen="${c.rid}" style="min-height:24px;font-size:12px;padding:0 8px" ${BATCH.run?'disabled':''}>看</button></label></div>`}).join('')}</div>
-   ${brOk?'':`<div class="alert" style="margin-top:8px">批量录单要「录单助手桥接」扩展 1.3 以上（现在：${BR?esc(BRV):'没装'}）。<a href="https://ziheng-work.github.io/qingbo-helper/guide.html" target="_blank" rel="noopener">看教程更新</a>，更新后刷新飞书页面。</div>`}
-   <button class="danger" id="bGo" style="width:100%;margin-top:8px" ${BATCH.run||!sel.length||!brOk||!d.acts.length?'disabled':''}>${BATCH.run?'录单中，别关页面…':BATCH.arm?'再点一次：真的提交 '+sel.length+' 张表单':'一键录单（'+sel.length+' 条）'}</button>
-   ${wbs.length&&!BATCH.run?`<button id="bWb" style="width:100%;margin-top:6px">补回写清博（${wbs.length} 条）</button>`:''}
-   ${rows.some((c,i)=>st[i][0]==='done'&&c.L.submitted)&&!BATCH.run?`<div class="ok" style="margin-top:8px"><b>下一步</b>：<a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒帖处理系统</a>，在那边的录单助手点「全部写进社媒系统」。<br><b>注意：这批全部录完单、回复实际发出去之后再去</b>，刚提交的等一两分钟让系统建好单。</div>`:''}`:''}
+  const brOk=BR&&vge(BRV,'1.3'),miss=need.filter(n=>!(CFG.faccDef&&CFG.faccDef[n]));
+  const faccSel=n=>{const opts=Object.values(FORM_ACC).find(f=>f[0]===n)[1];return `<label style="font-size:13px;display:block;margin-top:8px">${esc(n)}<select data-bfacc="${esc(n)}"><option value="">请选（这批都用）</option>${opts.map(o=>`<option ${CFG.faccDef&&CFG.faccDef[n]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`};
+  const ran=rows.some(c=>c.L.submitted),prog=Object.values(BATCH.msg).length;
+  let btn;
+  if(BATCH.run)btn=`<button class="primary big" disabled>录单中… ${Math.min(prog,BATCH.total||0)}/${BATCH.total||0}</button>`;
+  else if(BATCH.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
+  else if(!BATCH.scanned)btn=`<button class="primary big" id="bScan">一键录单</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="bGo" ${brOk&&d.acts.length?'':'disabled'}>确认录单 ${sel.length} 条</button>`;
+  else btn=`<button class="big" id="bScan">${rows.length?'没有可录的了 · 重新找':'没找到你的待录单 · 重新找'}</button>`;
+  const ico={ok:'',done:'✓',wb:'!',hold:'!',skip:'✕'};
+  el.innerHTML=`<div class="card">
+   ${btn}
+   <p class="hint" style="text-align:center">${esc(BATCH.info||'自动找出处理人是你、还没登记的帖子，填表提交并回写清博')}</p>
+   ${BATCH.scanned&&!brOk?`<div class="alert">要先把「录单助手桥接」扩展更新到 1.3（现在：${BR?esc(BRV):'没装'}）。<a href="https://ziheng-work.github.io/qingbo-helper/guide.html#setup" target="_blank" rel="noopener">怎么更新</a></div>`:''}
+   ${miss.map(faccSel).join('')}
+   ${rows.length?`<div style="margin-top:8px">${rows.map((c,i)=>{const[s,why]=st[i],L=c.L,m=BATCH.msg[c.rid],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li">${s==='ok'?`<input type="checkbox" data-bsel="${c.rid}" ${BATCH.off[c.rid]?'':'checked'} ${BATCH.run?'disabled':''}>`:`<span style="width:16px;text-align:center;color:${s==='done'?'var(--ok)':'var(--red)'}">${ico[s]}</span>`}<span class="t"><b>${esc(c.o.user||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc(L.models[0]||'')}</span>${ct&&s!=='skip'?` <span class="chip" title="${esc(L.closeAi||'')}">${esc(ct)}</span>`:''}${m||why?`<br><span class="s" style="color:${(m||'').startsWith('✓')||s==='done'&&!m?'var(--ok)':(m&&!m.startsWith('✕')?'var(--mute)':'var(--red)')}">${esc(m||why)}</span>`:''}</span><button class="lk" data-bopen="${c.rid}" ${BATCH.run?'disabled':''}>改</button></div>`}).join('')}</div>`:''}
+   ${wbs.length&&!BATCH.run?`<button id="bWb" style="width:100%;margin-top:8px">补回写清博（${wbs.length} 条）</button>`:''}
+   ${ran&&!BATCH.run?`<div class="ok"><b>回复都发出去后</b>，<a href="https://arashivision.feishu.cn/wiki/QIxTwDHUQi5MQSksiLycsXegnHe" target="_blank" rel="noopener">打开社媒系统</a>点「一键写进社媒系统」。</div>`:''}
+   ${BATCH.scanned&&!BATCH.run?`<details style="margin-top:8px"><summary class="hint" style="font-weight:400">更多选项</summary>
+    ${need.filter(n=>!miss.includes(n)).map(faccSel).join('')}
+    <p class="hint" style="margin:8px 0 4px">写进社媒系统的进展（这批都做了什么）：</p>
+    <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
+    <select id="bWait" style="margin-top:6px"><option value="">在等什么（可不选）</option>${WAITS.map(w=>`<option ${w===d.wait?'selected':''}>${w}</option>`).join('')}</select>
+    <button id="bScan2" style="width:100%;margin-top:8px">重新找一遍</button>
+    <p class="hint">「确认录单」会真的提交表单，撤不回。圆角标签是 AI 判断的关单原因，不对点「改」。</p>
+   </details>`:''}
   </div>`;
 }
 function applyDefaults(c){
@@ -435,13 +448,13 @@ async function batchWb(c){
   return r.err.length?'回写清博出错：'+r.err.join('；'):'';
 }
 async function runBatch(onlyWb){
-  if(BATCH.run)return;BATCH.run=1;BATCH.msg={};renderBatch();
-  const list=BATCH.rows.filter(c=>{const s=rowState(c)[0];return onlyWb?s==='wb':(s==='ok'&&!BATCH.off[c.rid])});
+  if(BATCH.run)return;BATCH.run=1;BATCH.msg={};
+  const list=BATCH.rows.filter(c=>{const s=rowState(c)[0];return onlyWb?s==='wb':(s==='ok'&&!BATCH.off[c.rid])});BATCH.total=list.length;renderBatch();
   for(let i=0;i<list.length;i++){
     let c=list[i];const rid=c.rid;
     try{
       if(!onlyWb){
-        BATCH.msg[rid]='① 打开表单并提交中…（'+(i+1)+'/'+list.length+'）';renderBatch();
+        BATCH.msg[rid]='提交表单中…';renderBatch();
         c=await buildCtx(rid);const k=BATCH.rows.findIndex(x=>x.rid===rid);if(k>=0)BATCH.rows[k]=c;
         if(isReg(c.v)){BATCH.msg[rid]='刚才已经有人登记了，跳过';continue}
         applyDefaults(c);try{await autoClose(c)}catch(e){}saveLocal();
@@ -450,25 +463,24 @@ async function runBatch(onlyWb){
         if(!res.ok){if(res.unknown||/^表单没提交成功/.test(res.text)){c.L.maybe=Date.now();saveLocal()}BATCH.msg[rid]='✕ '+res.text+(res.notOpened?'':'。那张表单的标签页还开着，可以过去手动处理');continue}
         c.L.submitted=Date.now();delete c.L.maybe;saveLocal();
       }else applyDefaults(c);
-      BATCH.msg[rid]='② 回写清博…';renderBatch();
+      BATCH.msg[rid]='回写清博中…';renderBatch();
       const e=await batchWb(c);
-      BATCH.msg[rid]=e?'✕ 表单已提交，但'+e:'✓ 已提交表单，已回写清博';
+      BATCH.msg[rid]=e?'✕ 表单已提交，但'+e:'✓ 已录单';
     }catch(e){BATCH.msg[rid]='✕ '+(e.message||String(e))}
     renderBatch();
   }
-  BATCH.run=0;
+  BATCH.run=0;BATCH.info='完成 '+Object.values(BATCH.msg).filter(m=>m.startsWith('✓')).length+'/'+list.length+' 条';
   for(let k=0;k<BATCH.rows.length;k++){try{const L=BATCH.rows[k].L,keep=BATCH.rows[k];BATCH.rows[k]=await buildCtx(keep.rid)}catch(e){}}
   renderBatch();
 }
 function renderPend(){
   const el=$('pend');if(!el)return;if(MODE==='qb'){renderBatch();return}if(MODE!=='sm'){el.innerHTML='';return}
   const ps=pendings(),fv=($('findNo')&&$('findNo').value)||'',sig=JSON.stringify([ps.map(([k,L])=>[k,noteText({L}),L.close,L.ticket]),PEND]);if(el.dataset.sig===sig)return;el.dataset.sig=sig;
-  el.innerHTML=`<div class="card"><h2>从清博带过来的（${ps.length}）</h2>
-   <div class="alert" style="margin:0 0 8px">要等<b>录完单、回复也实际发出去了</b>再来点这里（进展写的是「已回复」，没发出去就别写）。表单刚提交时系统还在建单，等一两分钟；没找到的单过会儿再点一次，已写过的不会重复写。</div>
-   ${ps.length?`<p class="hint" style="margin-top:0">你在清博表里填好进展的帖子。点一下，插件自己找到对应工单，把「当前进展」写进去${ps.some(([,L])=>L.close!=null&&CLOSE[L.close].act)?'，选了关单情况的顺便写「关单原因」和「用户是否回复」':''}。</p>
-   ${ps.map(([k,L])=>`<div class="out" style="margin-bottom:4px;font-size:12px"><b>${esc(L.user||'（无用户名）')}</b> ${esc(L.ticket||'按帖子链接找单')}<br>${esc(noteText({L}))}${closeTxt(L)?'<br><span style="color:var(--blue)">'+esc(closeTxt(L))+'</span>':''}${PEND.msg[k]?'<br><b>'+esc(PEND.msg[k])+'</b>':''}</div>`).join('')}
-   <button class="danger" id="pendGo" style="width:100%" ${PEND.run?'disabled':''}>${PEND.run?'写入中…':PEND.arm?'再点一次确认写入':'全部写进社媒系统'}</button>`:'<p class="hint" style="margin:0">没有待写入的。在清博表把第 ⑤ 步填好并点过第 ④ 步「回写」（或填了社媒单号）的帖子，会出现在这里。</p>'}
-   <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
+  el.innerHTML=`<div class="card">
+   <button class="${ps.length?'danger':''} big" id="pendGo" ${PEND.run||!ps.length?'disabled':''}>${PEND.run?'写入中…':ps.length?'一键写进社媒系统（'+ps.length+'）':'没有要写的单'}</button>
+   <p class="hint" style="text-align:center">${ps.length?'<b>录完单、回复实际发出后再点。</b>自动找单，写进展和关单原因':'在清博表录完单的帖子会出现在这里'}</p>
+   ${ps.map(([k,L])=>{const m=PEND.msg[k],ct=L.close!=null?(CLOSE[L.close].act?CLOSE[L.close].r:'不关单'):'';return `<div class="li"><span class="t"><b>${esc(L.user||'（无用户名）')}</b>${ct?` <span class="chip">${esc(ct)}</span>`:''}<br><span class="s" style="color:var(--mute)">${esc(noteText({L}))}</span>${m?`<br><span class="s" style="color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</span></div>`}).join('')}
+   <details style="margin-top:8px"><summary class="hint" style="font-weight:400">按单号找单</summary><div class="row" style="margin-top:6px"><input id="findNo" value="${esc(fv)}" placeholder="如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div></details>
   </div>`;
 }
 async function syncAll(){
@@ -565,7 +577,7 @@ async function writeBack(c=cur,quiet){
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderBatch();return}if(t.dataset.bopen){e.preventDefault();loadRecord(t.dataset.bopen);toast('已在下面打开这一条');return}if(t.id==='bGo'){if(!BATCH.arm){BATCH.arm=1;renderBatch();setTimeout(()=>{if(BATCH.arm&&!BATCH.run){BATCH.arm=0;renderBatch()}},6000);return}BATCH.arm=0;clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='bScan'||t.id==='bScan2'){clearErr();scanBatch();return}if(t.dataset.bact){const d=bdef(),a=t.dataset.bact;d.acts=d.acts.includes(a)?d.acts.filter(x=>x!==a):[...d.acts,a];saveCfg();renderBatch();return}if(t.dataset.bopen){e.preventDefault();$('mainBox').open=true;await loadRecord(t.dataset.bopen);$('mainBox').scrollIntoView({behavior:'smooth'});return}if(t.id==='bGo'){clearErr();await runBatch(false);return}if(t.id==='bWb'){clearErr();await runBatch(true);return}if(t.id==='pendGo'){await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();$('mainBox').open=true;await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);L.modelTouched=1;saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);L.modelTouched=1;saveLocal();render()}
