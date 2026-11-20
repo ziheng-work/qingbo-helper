@@ -59,7 +59,7 @@ details summary{cursor:pointer;font-weight:600}
       <label><b style="font-size:13px;color:var(--ink)">AI Key</b>（公司 AI 网关里自己建的 Key，只存在你的浏览器里）<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
       <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「连接」</option></select><button id="aiModels">连接</button></div>
       <span class="chip" id="aiState">未连接</span>
-      <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> 我是实习生：P0/P1 不录单（正式同事不用勾）</label>
+      <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> P0/P1 不录单</label>
       <button class="primary" id="setDone">设置好了，收起</button>
       <details id="adv"><summary class="hint">高级设置（一般不用动）</summary><div style="display:grid;gap:8px;margin-top:8px">
       <label class="row" style="font-size:13px"><input type="checkbox" id="autoAi" style="width:auto"> 点选一行时自动 AI 判断</label>
@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.37';
+const VER='1.38';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -283,7 +283,7 @@ function render(){
    <div class="row" style="justify-content:space-between"><h3 style="margin:0">优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，'+(L.ai?'AI':'关键词')+'建议 '+sp:'')}</h3>${aiReady()?`<button id="aiRun" style="min-height:28px">${BUSY.has(c.rid)?'AI 判断中…':(L.ai?'重新判断':'AI 判断')}</button>`:''}</div>
    ${L.ai?`<div class="ok" style="margin-top:6px">AI：${esc(L.ai.pri)} · ${esc((L.ai.models||[]).join('、')||'无型号')}<br>${esc(L.ai.why||'')}${L.ai.desc?`<br>简述：${esc(L.ai.desc)} <button id="aiDesc" style="min-height:24px;font-size:12px;padding:0 8px">用这个简述</button>`:''}${qbPri&&formPri(qbPri)!==formPri(L.ai.pri)?'<br>⚠️ 和清博分级不一致，按清博为准，有疑问问老师':''}</div>`:''}
    ${(()=>{const all=priOpts(),isMain=p=>/^(无需回复|P[0-3](技术|预期)?)$/.test(p),btn=p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p&&isMain(p)?'sug':''}">${esc(p)}</button>`,ord=['P0','P1','P2','P2技术','P2预期','P3','无需回复'],main=all.filter(isMain).sort((a,b)=>ord.indexOf(a)-ord.indexOf(b)),rest=all.filter(p=>!isMain(p));return `<div class="seg" style="margin-top:6px">${main.map(btn).join('')}</div>`+(rest.length?`<details style="margin-top:6px" ${rest.includes(L.pri)?'open':''}><summary class="hint" style="font-weight:400">更多标签（${rest.length}）</summary><div class="seg" style="margin-top:6px">${rest.map(btn).join('')}</div></details>`:'')})()}
-   ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
+   ${blocked?'<div class="alert">已设置 P0/P1 不录单。</div>':''}
    ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
    <h3>产品型号${c.qm&&c.qm.length?' · 清博已标「'+esc(c.qm.join('、'))+'」（优先按这个）':'（第一个用于转 FAE）'}</h3>
    <input id="mS" list="ml" placeholder="搜索型号，回车添加">
@@ -434,7 +434,7 @@ function rowState(c){
   if(!c.o.base)return['skip','没有录单URL'];
   if(!fp)return['skip','清博没分级，点这行先打标'];
   if(fp==='无需回复')return['skip','无需回复，不录单'];
-  if(CFG.intern&&(fp==='P0'||fp==='P1'))return['skip',fp+' 实习生不录单'];
+  if(CFG.intern&&(fp==='P0'||fp==='P1'))return['skip',fp+' 设置了不录单'];
   if(!L.models.length)return['skip','没有产品型号，点这行先选'];
   if(fa&&!(L.facc||(CFG.faccDef&&CFG.faccDef[fa[0]])))return['skip','先在上面选「'+fa[0]+'」'];
   return['ok',''];
