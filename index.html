@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.41';
+const VER='1.42';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -191,7 +191,7 @@ const isP2Tech=p=>/^P2\s*技术/.test(p||'');
 async function aiClose(c){
   const L=c.L;
   if(isP2Tech(L.pri))return{close:9,why:'P2 技术问题按规则不关单'};
-  const sys='你是 Insta360（影石）社媒客服的关单助手。客服已经在帖子下回复了用户。根据帖子内容（和客服回复，如果有）判断这张工单现在该不该关、关单原因选哪个。只输出严格 JSON：{"close":数字,"why":"一句中文理由"}。close 只能取：0=用法/咨询类问题，回复已答清楚（关单原因：已远程协助用户解决）；2=用户要的效果产品做不到或暂不支持，如夜景/画质模糊等硬件局限（产品局限，暂无解）；3=功能需求或建议，如自定义水印、LUT、某系统适配（已反馈需求）；4=摔坏、进水、硬件损坏需要维修（已引导寄回）；5=资料齐全、需要转在线客服或邮件处理的售后/订单问题（已转交在线/邮件处理）；8=不关单：还需要用户补充信息（机型、版本、截图、LogID、原片）或在等 FAE 答复，问题没有定论；9=不关单：故障类技术问题（连接、报错、闪退、固件、导出失败等）还没确认解决。拿不准时选 8。';
+  const sys='你是 Insta360（影石）社媒客服的关单助手。客服已经在帖子下回复了用户。根据帖子内容（和客服回复，如果有）判断这张工单现在该不该关、关单原因选哪个。只输出严格 JSON：{"close":数字,"why":"一句中文理由","note":"写进工单「当前进展」的一句话，不带日期和名字，说清做了什么、结果如何，如：已评论回复设置方法，用法问题已答清，关单"}。close 只能取：0=用法/咨询类问题，回复已答清楚（关单原因：已远程协助用户解决）；2=用户要的效果产品做不到或暂不支持，如夜景/画质模糊等硬件局限（产品局限，暂无解）；3=功能需求或建议，如自定义水印、LUT、某系统适配（已反馈需求）；4=摔坏、进水、硬件损坏需要维修（已引导寄回）；5=资料齐全、需要转在线客服或邮件处理的售后/订单问题（已转交在线/邮件处理）；8=不关单：还需要用户补充信息（机型、版本、截图、LogID、原片）或在等 FAE 答复，问题没有定论；9=不关单：故障类技术问题（连接、报错、闪退、固件、导出失败等）还没确认解决。拿不准时选 8。';
   const user='优先级：'+(L.pri||'')+'\n产品型号：'+L.models.join('、')+'\n平台：'+(c.o.plat||'')+'\n帖子：'+(c.v.title||'')+'\n'+(c.desc||'')+((c.v.reply||'').trim()?'\n客服回复：'+c.v.reply:'');
   const j=await aiCall('/chat/completions',{model:AI.model,temperature:0,messages:[{role:'system',content:sys},{role:'user',content:user}]});
   const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
@@ -202,7 +202,7 @@ async function autoClose(c){
   const L=c.L;if(L.closeTouched||L.close!=null)return;
   if(!isP2Tech(L.pri)&&!aiReady())return;
   const fp=formPri(L.pri);if(!fp||fp==='无需回复')return;
-  const o=await aiClose(c);L.close=o.close;L.closeAi=o.why||'';
+  const o=await aiClose(c);L.close=o.close;L.closeAi=o.why||'';if(CLOSE[o.close].act&&o.note&&!L.noteTouched){L.acts=[];L.extra=String(o.note).trim()}
   if(o.close===8&&!L.wait)L.wait='蹲用户回复';
 }
 const closeTxt=L=>{if(L.close==null)return '';const cl=CLOSE[L.close];return (cl.act?'关单：'+cl.r:'不关单')+(L.closeAi&&!L.closeTouched?'（AI：'+L.closeAi+'）':'')};
@@ -357,8 +357,8 @@ async function scanSM(){
       if(CFG.me&&(v.s_prog||'').includes(CFG.me+'：'))continue;
       rows.push(c);
     }
-    for(const c of rows){const L=c.L;defNote(L);if(!L.acc)L.acc=((CFG.accs&&CFG.accs[platOf(c)])||[])[0]||'';
-      if(L.close==null&&!L.closeTouched){SMB.info='判断关单原因：'+(c.v.s_user||'');renderPend();try{await autoClose(c)}catch(e){}}}
+    for(const c of rows){const L=c.L;if(!L.acc)L.acc=((CFG.accs&&CFG.accs[platOf(c)])||[])[0]||'';
+      if(L.close==null&&!L.closeTouched){SMB.info='AI 判断中：'+(c.v.s_user||'');renderPend();try{await autoClose(c)}catch(e){}}if(isAct(L)&&!L.acts.length&&!L.extra)L.acts=['已评论回复']}
     saveLocal();SMB.rows=rows;SMB.open=open;SMB.scanned=1;{const a=rows.filter(c=>isAct(c.L)).length,b=open.length-a;SMB.info=open.length?('你有 '+open.length+' 张开着的单：'+a+' 张可以直接关，'+b+' 张要你写进展'):'当前视图里没有你创建的、还开着的单'}
   }catch(e){SMB.info='';fail('找单失败：'+(e.message||e))}
   SMB.scan=0;renderPend();
@@ -547,12 +547,9 @@ function renderPend(){
 ${m?`<span class="s" style="display:block;color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</div>`}).join('')}
     <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">今天你的单都处理完了。</div>':'')})():''}
    <details id="sMore" style="margin-top:8px" ${moreOpen?'open':''}><summary class="hint" style="font-weight:400">更多选项</summary>
-    <p class="hint" style="margin:8px 0 4px">直接关单的那些写什么进展（改完点「重新找」生效）：</p>
-    <div class="seg">${ACTS.map(a=>`<button data-bact="${a}" class="${d.acts.includes(a)?'on':''}">${a}</button>`).join('')}</div>
-    <input id="bExtra" value="${esc(d.extra||'')}" placeholder="或者自己写一句，比如：Support号回复 发话题" style="margin-top:6px">
     <button id="sScan2" style="width:100%;margin-top:8px">重新找一遍</button>
     <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
-    <p class="hint">圆角标签是 AI 判断的关单原因，每张单的进展内容和关单原因都可以点「改」单独调。「待首回」「待关单」节点仍要自己点。</p>
+    <p class="hint">每张可关的单，关单原因和进展都是 AI 按这张单的内容判断、写的；不对就点「改」。「待首回」「待关单」节点仍要自己点。</p>
    </details>
   </div>`;
 }
