@@ -50,7 +50,7 @@ details summary{cursor:pointer;font-weight:600}
     <summary>设置</summary>
     <div style="display:grid;gap:8px;margin-top:8px">
       <div class="ok" id="firstTip" style="display:none;margin:0">第一次用，三步就好：① 填你的名字 ② 装桥接扩展 ③ 粘 Key 点「连接」。不用 AI 的话只做第 ① 步也行。</div>
-      <label><b style="font-size:13px;color:var(--ink)">① 你的名字</b>（社媒系统「当前进展」里你平时怎么落款就填什么，名字或缩写都行。填「子恒」，生成的进展就是「11.20 子恒：已评论回复」）<input id="me" placeholder="如：子恒、ft"></label>
+      <label><b style="font-size:13px;color:var(--ink)">① 你的名字</b>（社媒系统「当前进展」里你平时怎么落款就填什么，名字或缩写都行。生成的进展就是「11.20 …：已评论回复」）<input id="me" placeholder="名字或缩写"></label>
       <b style="font-size:13px">② 装桥接扩展</b>
       <p class="hint" style="margin:0">AI 判断（自动给优先级、型号、简述）要用它。下载并解压 → Chrome 地址栏打开 chrome://extensions → 打开右上角「开发者模式」→ 点「加载未打包的扩展程序」选解压出的文件夹 → 回来刷新本页。</p>
       <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
@@ -115,7 +115,7 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.8';
+const VER='1.9';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
