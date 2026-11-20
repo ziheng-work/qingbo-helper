@@ -120,7 +120,7 @@ async function loadRecord(rid){
   const L=LOCAL[rid]||(LOCAL[rid]={pri:'',models:[],ticket:'',acc:'',acts:[],wait:'',extra:'',close:null});
   if(!L.models.length&&!L._sug){L.models=[];L._sug=1}
   cur={rid,v,o,L,desc:o.desc||v.title,fans:(v.fans||'').replace(/[^\d]/g,'')};
-  if(!L.pri&&v.pri)L.pri=v.pri;
+  if(v.pri&&v.pri.trim()&&!L.priTouched)L.pri=v.pri.trim();
   render();
 }
 
@@ -130,13 +130,13 @@ function formUrl(c){
   const val={user:c.o.user,type:c.o.type,plat:c.o.plat,time:c.o.time,link:c.o.link,desc:c.desc,pri:fp,fan:fanBucket(c.fans)||c.o.fan};
   return (c.o.base||'')+'?'+Object.entries(val).filter(([,x])=>x).map(([k,x])=>'prefill_'+encodeURIComponent(K[k])+'='+encodeURIComponent(x)).join('&');
 }
-const priOpts=()=>F.pri&&F.pri.type===FieldType.SingleSelect?(F.pri.property?.options||[]).map(o=>o.name):['P0','P1','P2','P3','无需回复'];
+const priOpts=()=>{const o=F.pri&&(F.pri.type===FieldType.SingleSelect||F.pri.type===FieldType.MultiSelect)?(F.pri.property?.options||[]).map(o=>o.name):[];const b=o.length?o:['P0','P1','P2','P3','无需回复'];const v=(cur&&cur.v.pri||'').trim();return v&&!b.includes(v)?[v,...b]:b};
 const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property?.options||[]).map(o=>o.name):[];
 
 function render(){
   const c=cur;if(!c)return;const L=c.L,v=c.v;
   const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复';
-  const sp=sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
+  const qbPri=(v.pri||'').trim(),sp=qbPri?'':sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
   const fl=fanBucket(c.fans)||c.o.fan||'';
   const taken=v.handler&&v.handler.trim();
   const po=progOpts();
@@ -152,7 +152,7 @@ function render(){
   </div>
 
   <div class="card"><h2><span class="n">2</span>打标</h2>
-   <h3>优先级${sp?' · 关键词建议 '+sp:''}</h3>
+   <h3>优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，关键词建议 '+sp:'')}</h3>
    <div class="seg">${priOpts().map(p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p?'sug':''}">${esc(p)}</button>`).join('')}</div>
    ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
    ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
@@ -171,7 +171,7 @@ function render(){
 
   <div class="card wb"><h2><span class="n">4</span>回写清博（只写这一行）</h2>
    ${F.reg?`<label><input type="checkbox" data-w="reg" ${L.w_reg!==false?'checked':''}> ${esc(F.reg.name)} → 是</label>`:''}
-   ${F.pri?`<label><input type="checkbox" data-w="pri" ${L.w_pri!==false?'checked':''}> ${esc(F.pri.name)} → ${esc(L.pri||'（先打标）')}</label>`:''}
+   ${F.pri?(qbPri&&L.pri===qbPri?`<label style="color:var(--mute)">${esc(F.pri.name)}：清博已是「${esc(qbPri)}」，不改</label>`:`<label><input type="checkbox" data-w="pri" ${L.w_pri!==false?'checked':''}> ${esc(F.pri.name)} → ${esc(L.pri||'（先打标）')}${qbPri?'（会覆盖清博的「'+esc(qbPri)+'」）':''}</label>`):''}
    ${F.date?`<label><input type="checkbox" data-w="date" ${L.w_date!==false?'checked':''}> ${esc(F.date.name)} → 今天</label>`:''}
    ${F.handler?`<label><input type="checkbox" data-w="handler" ${L.w_handler!==false&&!taken?'checked':''}> ${esc(F.handler.name)} → 我${taken?'（已有人，默认不勾）':''}</label>`:''}
    ${F.prog&&po.length?`<label><input type="checkbox" data-w="prog" ${L.w_prog!==false?'checked':''}> ${esc(F.prog.name)} → <select id="progSel" style="width:auto;padding:2px 6px">${po.map(o=>`<option ${o===L.progSel?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`:''}
@@ -211,7 +211,7 @@ async function writeBack(){
   const d=new Date();d.setHours(0,0,0,0);
   const plan=[];
   if(F.reg&&L.w_reg!==false)plan.push([F.reg,F.reg.type===T.Checkbox?true:'是']);
-  if(F.pri&&L.w_pri!==false&&L.pri)plan.push([F.pri,L.pri]);
+  if(F.pri&&L.w_pri!==false&&L.pri&&L.pri!==(c.v.pri||'').trim())plan.push([F.pri,L.pri]);
   if(F.date&&L.w_date!==false)plan.push([F.date,d.getTime()]);
   const taken=c.v.handler&&c.v.handler.trim();
   if(F.handler&&(L.w_handler===true||(L.w_handler!==false&&!taken))){if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}if(userId)plan.push([F.handler,userId]);else err.push('读不到当前用户，处理人没写')}
@@ -225,7 +225,7 @@ async function writeBack(){
 
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button');if(!t||!cur)return;const L=cur.L;
-  if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;saveLocal();render()}
+  if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
   else if(t.dataset.act){const a=t.dataset.act;L.acts=L.acts.includes(a)?L.acts.filter(x=>x!==a):[...L.acts,a];saveLocal();render()}
