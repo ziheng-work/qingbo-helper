@@ -59,10 +59,10 @@ details summary{cursor:pointer;font-weight:600}
       <label><b style="font-size:13px;color:var(--ink)">AI Key</b>（公司 AI 网关里自己建的 Key，只存在你的浏览器里）<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
       <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「连接」</option></select><button id="aiModels">连接</button></div>
       <span class="chip" id="aiState">未连接</span>
+      <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> 我是实习生：P0/P1 不录单（正式同事不用勾）</label>
       <button class="primary" id="setDone">设置好了，收起</button>
       <details id="adv"><summary class="hint">高级设置（一般不用动）</summary><div style="display:grid;gap:8px;margin-top:8px">
       <label class="row" style="font-size:13px"><input type="checkbox" id="autoAi" style="width:auto"> 点选一行时自动 AI 判断</label>
-      <label class="row" style="font-size:13px"><input type="checkbox" id="intern" style="width:auto"> 实习生规则（P0/P1 不录单）</label>
       <label>AI 服务<select id="aiProv"><option value="https://ai-gateway.insta360.cn/v1">公司网关（默认）</option><option value="custom">自定义地址</option></select></label>
       <label id="aiBaseWrap" style="display:none">AI 地址<input id="aiBase" placeholder="https://xxx/v1"></label>
       <p class="hint" style="margin:0">字段名（按包含匹配，表头改名了在这里改）</p>
@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.36';
+const VER='1.37';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -704,7 +704,7 @@ if(!CFG.done){$('setBox').open=true;$('firstTip').style.display=''}
 $('setDone').onclick=()=>{if(MODE==='sm'&&!CFG.me){fail('先填一下进展落款');$('me').focus();return}clearErr();CFG.done=1;saveCfg();$('firstTip').style.display='none';$('setBox').open=false;toast('设置好了，点表格里任意一行开始')};
 $('me').value=CFG.me;$('intern').checked=CFG.intern;
 $('me').oninput=e=>{CFG.me=e.target.value.trim();saveCfg();renderPend();if(cur){const n=$('note');if(n)n.textContent=noteText(cur)}};
-$('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
+$('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render();renderPend()};
 $('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toast('已重新读取')};
 document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
 
