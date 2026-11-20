@@ -85,7 +85,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  <div class="you"><b>③ 到社媒系统点「一键处理我的单」</b>它找出你创建的、还没写进展的单（清博录的、自己手动填表录的都算），AI 判断关单原因；再点「确认写入」，进展和关单原因写进每张工单。<b>要等回复实际发出去之后再点</b></div>
 </div>
 <p class="tip"><b>不从清博录单的人</b>（自己手动填表的）：直接用第 ③ 步就行，社媒系统那边不依赖清博。写的进展默认是「已评论回复」，在「更多选项」里可以换成别的或自己写一句，每张单也能点「改」单独调。</p>
-<p class="tip">批量录单会<b>真的提交表单</b>，提交后撤不回，所以点之前看一眼清单。某条失败时那张表单的标签页会留着，过去手动处理就行；已经提交过的不会重复提交。需要桥接扩展 1.3.0 以上。「待首回」「待关单」的流程节点仍然要自己点。</p>
+<p class="tip">批量录单会<b>真的提交表单</b>，提交后撤不回，所以点之前看一眼清单。某条失败时那张表单的标签页会留着，过去手动处理就行；已经提交过的不会重复提交。需要桥接扩展 1.4.0 以上。流程节点由扩展自动点。</p>
 
 <h2 id="day">一条一条录<small>熟了以后一条帖子 1 分钟左右</small></h2>
 <div class="day">
@@ -108,7 +108,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>面板最下面点<b>「自定义插件」</b>，再点右上角<b>「新增插件」</b>。</li>
    <li>名称填「录单助手」，服务地址粘贴下面这串，点确定：</li>
   </ol>
-  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=42</span>
+  <span class="url">https://ziheng-work.github.io/qingbo-helper/?v=43</span>
   <p class="tip">插件跟着你的飞书账号走。在清博表装一次，社媒帖处理系统里也能用，不用装两遍。以后在任意一张表点拼图图标 → 自定义插件 → 录单助手，就能打开。</p>
  </div>
  <div class="fig"><span class="cap">入口</span>
@@ -127,13 +127,13 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>Chrome 地址栏输入 <code>chrome://extensions</code> 回车。</li>
    <li>打开右上角<b>「开发者模式」</b>。</li>
    <li>点<b>「加载未打包的扩展程序」</b>，选刚才的 <code>qingbo-bridge</code> 文件夹。</li>
-   <li>列表里出现「录单助手桥接 1.3.0」就装好了。回飞书刷新页面。</li>
+   <li>列表里出现「录单助手桥接 1.4.0」就装好了。回飞书刷新页面。</li>
   </ol>
   <p class="tip">以前装过旧版（1.0.0）的：新文件覆盖原文件夹，再在扩展卡片上点刷新按钮。</p>
  </div>
  <div class="fig"><span class="cap">chrome://extensions</span>
   <div class="bar"><span class="btn">加载未打包的扩展程序</span><span class="sp"></span><span class="mute">开发者模式</span><span class="pill">开</span></div>
-  <div class="pc"><span class="t">录单助手桥接 <span class="mute" style="font-weight:400">1.3.0</span></span><span class="mute">配合飞书里的「录单助手」插件：转发 AI 请求到公司网关，并在录单表单页自动选上产品型号、放上清博的帖子截图。</span></div>
+  <div class="pc"><span class="t">录单助手桥接 <span class="mute" style="font-weight:400">1.4.0</span></span><span class="mute">配合飞书里的「录单助手」插件：转发 AI 请求到公司网关，并在录单表单页自动选上产品型号、放上清博的帖子截图。</span></div>
  </div>
 </div>
 
@@ -142,7 +142,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
   <h3><span class="n">3</span>填设置</h3>
   <p>第一次打开插件，设置会自动展开：</p>
   <ul>
-   <li><b>桥接扩展</b>：显示「已安装 1.3.0」就对了。</li>
+   <li><b>桥接扩展</b>：显示「已安装 1.4.0」就对了。</li>
    <li><b>AI Key</b>：去公司 AI 网关 <code>ai-gateway.insta360.cn</code> 自己建一个 Key，粘进来点「连接」，显示「已就绪」。Key 只存在你自己的浏览器里，别发给别人。</li>
   </ul>
   <p>点<b>「设置好了，收起」</b>。</p>
@@ -150,7 +150,7 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
  </div>
  <div class="fig"><span class="cap">首次设置</span>
   <div class="pc"><span class="t">▼ 设置</span>
-   <b>桥接扩展</b><div><span class="pill">桥接扩展：已安装 1.3.0</span></div>
+   <b>桥接扩展</b><div><span class="pill">桥接扩展：已安装 1.4.0</span></div>
    <div style="margin-top:6px"><b>AI Key</b></div><div class="inp">••••••••••••••••</div>
    <div><span class="inp" style="display:inline-block">claude-haiku-4-5 ▾</span> <span class="btn">连接</span></div>
    <div class="okb">已就绪</div>
@@ -257,10 +257,10 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
    <li>打开社媒帖处理系统，切到<b>「社媒支持（当日）」</b>视图，打开录单助手。</li>
    <li>第一次用：在「设置」里填<b>进展落款</b>（你在进展里平时写的名字或缩写）。</li>
    <li>点蓝色<b>「一键处理我的单」</b>：找出你创建的、还开着的单（清博录的、手动填表录的都算），AI 判断哪些现在就能关。</li>
-   <li><b>能关的</b>：AI 按每张单的内容判断关单原因，并写一句进展（比如「已评论回复设置方法，用法问题已答清，关单」）。点红色「一键关单 N 张」，进展、关单原因、用户是否回复一起写进去。</li>
-   <li><b>不能关的</b>（P2 技术、还在等用户/FAE、以前就开着的）：列在「要你写进展的」里，插件不替你写。给每张写一句进展，有新情况能关的也可以在下拉里选关单原因，点「写入填好的」。不用动的留空。</li>
+   <li><b>能关的</b>：AI 按每张单的内容判断关单原因，并写一句进展（比如「已评论回复设置方法，用法问题已答清，关单」）。<b>确认这些帖子的回复都已经发出去了</b>，再点红色「回复都发出了，一键关单 N 张」：进展、关单原因、用户是否回复写进去，扩展再自动把流程节点点到关单。</li>
+   <li><b>不能关的</b>（P2 技术、还在等用户/FAE、以前就开着的）：列在「要你写进展的」里，插件不替你写。给每张写一句进展，有新情况能关的也可以在下拉里选关单原因，点「写入填好的」。还在「待首回」的单，写完进展后扩展会自动完成首回节点。不用动的留空。</li>
   </ol>
-  <p class="warn">写同事建的单之前，先把自己加进那张单「待首回」节点的分配人员，否则字段是灰的，会写入失败。「待首回」「待关单」节点仍要自己点。</p>
+  <p class="warn">写同事建的单之前，先把自己加进那张单「待首回」节点的分配人员，否则字段是灰的，会写入失败。流程节点由桥接扩展 1.4.0 自动点：它会在后台打开那张工单点「完成节点」，点完自动关掉；点不成的会标红，那个标签页会留着给你手动点。</p>
  </div>
  <div class="fig"><span class="cap">社媒系统里的面板</span>
   <div class="pc">
@@ -275,15 +275,16 @@ footer{margin-top:56px;color:var(--mute);font-size:13px;text-align:center}
 <table>
  <tr><th>事情</th><th>原因</th></tr>
  <tr><td>清博没截图的那条，自己截图</td><td>没有现成的图可放</td></tr>
- <tr><td>检查后点「提交」</td><td>提交前要人看一遍</td></tr>
- <tr><td>流程里「待首回」「待关单」的完成节点</td><td>流程按钮不对插件开放。回复实际发出后再点首回</td></tr>
+ <tr><td>确认回复已经实际发出去，再点社媒系统的按钮</td><td>插件看不到帖子下面有没有你的回复，只能你来确认</td></tr>
+ <tr><td>不能关的单，自己写进展</td><td>进展内容只有你知道</td></tr>
+ <tr><td>标红「节点没点成」的单，手动点完成节点</td><td>页面没加载好或有必填项没填时，扩展点不了</td></tr>
  <tr><td>企业微信群的「具体群」</td><td>表单里手选</td></tr>
 </table>
 
 <h2 id="faq">常见问题</h2>
 <table>
  <tr><th>现象</th><th>怎么办</th></tr>
- <tr><td>表单里型号或截图没有自动放上</td><td>到 <code>chrome://extensions</code> 看「录单助手桥接」是不是 1.3.0。不是就重新下载，覆盖原文件夹，点扩展卡片上的刷新按钮</td></tr>
+ <tr><td>表单里型号或截图没有自动放上</td><td>到 <code>chrome://extensions</code> 看「录单助手桥接」是不是 1.4.0。不是就重新下载，覆盖原文件夹，点扩展卡片上的刷新按钮</td></tr>
  <tr><td>右下角红色提示「表单里没有这个选项」</td><td>清博写的型号名和表单选项对不上，点「复制型号」手动选最接近的</td></tr>
  <tr><td>显示「这张表不认识」</td><td>插件只认清博表和社媒帖处理系统。换到这两张表的数据视图再打开</td></tr>
  <tr><td>AI 连不上</td><td>看桥接扩展是否「已安装」、Key 是否有效。公司电脑禁了开发者模式的话，就不用 AI，手动打标</td></tr>

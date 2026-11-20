@@ -39,7 +39,7 @@ button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible
 .empty{text-align:center;color:var(--mute);padding:28px 10px}
 details summary{cursor:pointer;font-weight:600}
 .big{width:100%;min-height:48px;font-size:16px;border-radius:8px}
-.li{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.li input{width:auto;margin-top:3px}.li .t{flex:1}.li .s{font-size:12px}.lk{min-height:22px;padding:0 6px;font-size:12px;font-weight:500;border:0;color:var(--blue);background:none}
+.li{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.li input[type=checkbox]{width:auto;margin-top:3px}.li .t{flex:1}.li .s{font-size:12px}.lk{min-height:22px;padding:0 6px;font-size:12px;font-weight:500;border:0;color:var(--blue);background:none}
 .toast{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
 .toast.show{opacity:1}
 </style>
@@ -128,7 +128,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.42';
+const VER='1.43';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -164,7 +164,7 @@ const saveAi=()=>{try{localStorage.setItem('qbai',JSON.stringify(AI))}catch(e){}
 let BR=false,BRV='',BRID=0;const BRW={},BOW={};
 const vge=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return true};
 const bopen=(id,url)=>new Promise(ok=>{BOW[id]=ok;window.postMessage({type:'QB_OPEN_REQ',id,url},location.origin);setTimeout(()=>{if(BOW[id]){delete BOW[id];ok({ok:false,text:'3 分钟没等到结果',unknown:true})}},180000)});
-window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=!vge(BRV,'1.3');el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新到 1.3 才能批量录单）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}if(d.type==='QB_FORM_RES'&&BOW[d.id]){BOW[d.id](d);delete BOW[d.id]}});
+window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){const first=!BR;BR=true;BRV=d.version||'1.0.0';const el=document.getElementById('brState');if(el){const old=!vge(BRV,'1.4');el.textContent='桥接扩展：已安装 '+BRV+(old?'（旧版，更新到 1.4 才能自动点流程节点）':'');el.className='chip '+(old?'':'g')}if(first&&typeof cur!=='undefined'&&cur&&!cur.sm&&typeof render==='function')render()}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}if(d.type==='QB_FORM_RES'&&BOW[d.id]){BOW[d.id](d);delete BOW[d.id]}});
 async function bfetch(url,opt){
   if(BR)return new Promise((ok,no)=>{const id=++BRID;BRW[id]=r=>ok(r);window.postMessage({type:'QB_BRIDGE_REQ',id,url,method:opt.method,headers:opt.headers,body:opt.body},location.origin);setTimeout(()=>{if(BRW[id]){delete BRW[id];no(new Error('桥接扩展没响应'))}},90000)});
   try{const r=await fetch(url,opt);return{ok:r.ok,status:r.status,text:await r.text()}}catch(e){throw new Error('连不上 AI：没装桥接扩展，浏览器拦截了跨域请求')}
@@ -191,7 +191,7 @@ const isP2Tech=p=>/^P2\s*技术/.test(p||'');
 async function aiClose(c){
   const L=c.L;
   if(isP2Tech(L.pri))return{close:9,why:'P2 技术问题按规则不关单'};
-  const sys='你是 Insta360（影石）社媒客服的关单助手。客服已经在帖子下回复了用户。根据帖子内容（和客服回复，如果有）判断这张工单现在该不该关、关单原因选哪个。只输出严格 JSON：{"close":数字,"why":"一句中文理由","note":"写进工单「当前进展」的一句话，不带日期和名字，说清做了什么、结果如何，如：已评论回复设置方法，用法问题已答清，关单"}。close 只能取：0=用法/咨询类问题，回复已答清楚（关单原因：已远程协助用户解决）；2=用户要的效果产品做不到或暂不支持，如夜景/画质模糊等硬件局限（产品局限，暂无解）；3=功能需求或建议，如自定义水印、LUT、某系统适配（已反馈需求）；4=摔坏、进水、硬件损坏需要维修（已引导寄回）；5=资料齐全、需要转在线客服或邮件处理的售后/订单问题（已转交在线/邮件处理）；8=不关单：还需要用户补充信息（机型、版本、截图、LogID、原片）或在等 FAE 答复，问题没有定论；9=不关单：故障类技术问题（连接、报错、闪退、固件、导出失败等）还没确认解决。拿不准时选 8。';
+  const sys='你是 Insta360（影石）社媒客服的关单助手。客服已经在帖子下回复了用户。根据帖子内容（和客服回复，如果有）判断这张工单现在该不该关、关单原因选哪个。只输出严格 JSON：{"close":数字,"why":"一句中文理由","note":"写进工单「当前进展」的一句话，不带日期和名字，格式是「已评论回复+回复的方向，关单」，如：已评论回复设置方法，用法问题已答清，关单"}。note 只能写帖子里看得出来的事，不要编造没发生的检测、确认、用户反馈或转交动作。close 只能取：0=用法/咨询类问题，回复已答清楚（关单原因：已远程协助用户解决）；2=用户要的效果产品做不到或暂不支持，如夜景/画质模糊等硬件局限（产品局限，暂无解）；3=功能需求或建议，如自定义水印、LUT、某系统适配（已反馈需求）；4=摔坏、进水、硬件损坏需要维修（已引导寄回）；5=资料齐全、需要转在线客服或邮件处理的售后/订单问题（已转交在线/邮件处理）；8=不关单：还需要用户补充信息（机型、版本、截图、LogID、原片）或在等 FAE 答复，问题没有定论；9=不关单：故障类技术问题（连接、报错、闪退、固件、导出失败等）还没确认解决。拿不准时选 8。';
   const user='优先级：'+(L.pri||'')+'\n产品型号：'+L.models.join('、')+'\n平台：'+(c.o.plat||'')+'\n帖子：'+(c.v.title||'')+'\n'+(c.desc||'')+((c.v.reply||'').trim()?'\n客服回复：'+c.v.reply:'');
   const j=await aiCall('/chat/completions',{model:AI.model,temperature:0,messages:[{role:'system',content:sys},{role:'user',content:user}]});
   const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
@@ -371,6 +371,14 @@ async function smWrite(rid,L){
   return done;
 }
 const isAct=L=>L.close!=null&&CLOSE[L.close].act;
+async function stageGo(rid,mode){
+  if(!(BR&&vge(BRV,'1.4')))return '节点要自己点（桥接扩展更新到 1.4 后会自动点）';
+  let url='';try{const view=await table.getActiveView();url=await bitable.bridge.getBitableUrl({tableId:table.id,viewId:view.id,recordId:rid})}catch(e){}
+  if(!url)return '节点没点：取不到这张单的链接';
+  const id='st:'+rid+':'+Date.now();
+  const res=await new Promise(ok=>{BOW[id]=ok;window.postMessage({type:'QB_STAGE_REQ',id,url,mode},location.origin);setTimeout(()=>{if(BOW[id]){delete BOW[id];ok({ok:false,text:'2 分钟没等到结果'})}},120000)});
+  return res.ok?res.text:'节点没点成：'+res.text+(res.notOpened?'':'（那个标签页留着，可以手动点）');
+}
 const openLeft=()=>SMB.open.filter(c=>!c.fxDone&&!(isAct(c.L)&&!SMB.off[c.rid]&&SMB.rows.includes(c)));
 async function runFix(){
   if(SMB.fx)return;SMB.fx=1;SMB.fxMsg={};
@@ -381,7 +389,8 @@ async function runFix(){
       if(c.fx.note.trim()&&F.s_prog){const old=(await table.getCellString(F.s_prog.id,c.rid))||'';const note=today()+' '+CFG.me+'：'+c.fx.note.trim();await writeVal(F.s_prog,note+(old?'\n'+old:''),c.rid);done.push('进展')}
       if(cl&&cl.act)for(const[f,val]of [[F.s_reason,cl.r],[F.s_replied,cl.u==='按实际填'?'':cl.u]]){if(!f||!val)continue;const o=optOf(f,val);if(o){await writeVal(f,o.name,c.rid);done.push(f.name.split('/')[0].split('（')[0])}else done.push('「'+val+'」没这个选项')}
       if(cl&&cl.act){c.L.close=+c.fx.close;c.L.closeTouched=1}if(done.length)c.fxDone=1;
-      try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}c.fx.note='';SMB.fxMsg[c.rid]='✓ '+(done.join('、')||'没有要写的');
+      if(done.length){const mode=cl&&cl.act?'close':(/待首回/.test(c.v.s_status||'')?'first':'');if(mode){SMB.fxMsg[c.rid]='已写 '+done.join('、')+'，正在点节点…';renderPend();done.push(await stageGo(c.rid,mode))}}
+      try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}c.fx.note='';SMB.fxMsg[c.rid]=(done.some(x=>/没点|自己点/.test(x))?'! ':'✓ ')+(done.join('、')||'没有要写的');
     }catch(e){SMB.fxMsg[c.rid]='✕ '+(e.message||String(e))}
     renderPend();
   }
@@ -392,7 +401,7 @@ async function runSM(){
   const list=SMB.rows.filter(c=>!SMB.off[c.rid]&&!c.done&&isAct(c.L));SMB.total=list.length;renderPend();
   for(const c of list){
     SMB.msg[c.rid]='写入中…';renderPend();
-    try{const done=await smWrite(c.rid,c.L);c.done=1;try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='✓ '+done.join('、')}
+    try{const done=await smWrite(c.rid,c.L);c.done=1;try{c.v.s_prog=(await table.getCellString(F.s_prog.id,c.rid))||c.v.s_prog}catch(e){}const qr=LOCAL._links&&LOCAL._links[normLink(c.v.s_link)];if(qr&&LOCAL[qr]&&typeof LOCAL[qr]==='object')LOCAL[qr].synced=Date.now();saveLocal();SMB.msg[c.rid]='已写 '+done.join('、')+'，正在点节点…';renderPend();const st=await stageGo(c.rid,'close');SMB.msg[c.rid]=(/没点|自己点/.test(st)?'! ':'✓ ')+done.join('、')+'；'+st}
     catch(e){SMB.msg[c.rid]='✕ '+(e.message||String(e))}
     renderPend();
   }
@@ -531,13 +540,13 @@ function renderPend(){
   if(SMB.run||PEND.run)btn=`<button class="primary big" disabled>写入中…</button>`;
   else if(SMB.scan)btn=`<button class="primary big" disabled>正在找你的单…</button>`;
   else if(!SMB.scanned)btn=`<button class="primary big" id="sScan" ${CFG.me?'':'disabled'}>一键处理我的单</button>`;
-  else if(sel.length)btn=`<button class="danger big" id="sGo">一键关单 ${sel.length} 张</button>`;
+  else if(sel.length)btn=`<button class="danger big" id="sGo">回复都发出了，一键关单 ${sel.length} 张</button>`;
   else btn=`<button class="big" id="sScan">重新找一遍</button>`;
   el.innerHTML=`<div class="card">
    ${btn}
    ${CFG.me?'':'<div class="alert">先在上面「设置」里填「进展落款」（你的名字或缩写）。</div>'}
    <p class="hint" style="text-align:center">${esc(SMB.info)||'找出你创建的、还开着的单（清博录的、手动录的都算）：能关的一键关，不能关的列出来给你写进展。<b>回复实际发出后再点</b>'}</p>
-   ${rows.map(c=>{const L=c.L,m=SMB.msg[c.rid];return `<div class="li">${c.done?'<span style="width:16px;text-align:center;color:var(--ok)">✓</span>':`<input type="checkbox" data-ssel="${c.rid}" ${SMB.off[c.rid]?'':'checked'} ${SMB.run?'disabled':''}>`}<span class="t"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc((L.models||[])[0]||'')}</span>${chip(L)}<br><span class="s" style="color:${m?(m.startsWith('✓')?'var(--ok)':m.startsWith('✕')?'var(--red)':'var(--mute)'):'var(--mute)'}">${esc(m||noteText({L}))}</span></span><button class="lk" data-sopen="${c.rid}" ${SMB.run?'disabled':''}>改</button></div>`}).join('')}
+   ${rows.map(c=>{const L=c.L,m=SMB.msg[c.rid];return `<div class="li">${c.done?'<span style="width:16px;text-align:center;color:var(--ok)">✓</span>':`<input type="checkbox" data-ssel="${c.rid}" ${SMB.off[c.rid]?'':'checked'} ${SMB.run?'disabled':''}>`}<span class="t"><b>${esc(c.v.s_user||c.v.s_case||'（无用户名）')}</b> <span style="color:var(--mute)">${esc(formPri(L.pri)||'')} ${esc((L.models||[])[0]||'')}</span>${chip(L)}<br><span class="s" style="color:${m?(m.startsWith('✓')?'var(--ok)':/^[✕!]/.test(m)?'var(--red)':'var(--mute)'):'var(--mute)'}">${esc(m||noteText({L}))}</span></span><button class="lk" data-sopen="${c.rid}" ${SMB.run?'disabled':''}>改</button></div>`}).join('')}
    ${ps.length&&SMB.scanned&&!sel.length&&!PEND.run&&!SMB.run?`<button id="pendGo" style="width:100%;margin-top:8px">清博录的还有 ${ps.length} 条没在当前视图找到，按链接再找一次</button>`:''}
    ${ps.map(([k,L])=>PEND.msg[k]?`<div class="li"><span class="t"><b>${esc(L.user||'')}</b><br><span class="s" style="color:${PEND.msg[k].startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(PEND.msg[k])}</span></span></div>`:'').join('')}
    ${SMB.scanned&&!SMB.run&&!PEND.run?(()=>{const ol=openLeft();return ol.length?`<div style="margin-top:12px;border-top:2px solid var(--line);padding-top:10px"><b style="font-size:14px">要你写进展的（${ol.length}）</b><p class="hint" style="margin:2px 0 6px">这些单还不能关，插件不替你写。给每张写一句进展（会自动加「${esc(today())} ${esc(CFG.me||'落款')}：」），能关的也可以在下拉里选关单原因，然后点下面的按钮。不用动的留空。</p>
@@ -545,11 +554,11 @@ function renderPend(){
      <input data-fxn="${c.rid}" value="${esc(c.fx.note)}" placeholder="写进展，如：Support号回复，蹲用户补 LogID" style="margin-top:6px" ${SMB.fx?'disabled':''}>
      <select data-fxc="${c.rid}" style="margin-top:4px" ${SMB.fx?'disabled':''}><option value="">先不关单</option>${CLOSE.map((x,i)=>x.act?`<option value="${i}" ${String(c.fx.close)===String(i)?'selected':''}>${esc(x.q)} → ${esc(x.r)}</option>`:'').join('')}</select>
 ${m?`<span class="s" style="display:block;color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span>`:''}</div>`}).join('')}
-    <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">今天你的单都处理完了。</div>':'')})():''}
+    <button class="danger big" id="fxGo" style="margin-top:8px" ${SMB.fx||!ol.some(c=>c.fx.close!==''||c.fx.note.trim())?'disabled':''}>${SMB.fx?'写入中…':'写入填好的'}</button></div>`:(SMB.open.length?'<div class="ok">今天你的单都处理完了。</div>':'')+Object.entries(SMB.fxMsg).map(([r,m])=>{const c=SMB.open.find(x=>x.rid===r);return c&&c.fxDone?`<div class="li"><span class="t"><b>${esc(c.v.s_user||c.v.s_case||'')}</b><br><span class="s" style="color:${m.startsWith('✓')?'var(--ok)':'var(--red)'}">${esc(m)}</span></span></div>`:''}).join('')})():''}
    <details id="sMore" style="margin-top:8px" ${moreOpen?'open':''}><summary class="hint" style="font-weight:400">更多选项</summary>
     <button id="sScan2" style="width:100%;margin-top:8px">重新找一遍</button>
     <div class="row" style="margin-top:8px"><input id="findNo" value="${esc(fv)}" placeholder="按单号找单，如 20261120SM12xxxx" style="flex:1"><button id="findGo">打开</button></div>
-    <p class="hint">每张可关的单，关单原因和进展都是 AI 按这张单的内容判断、写的；不对就点「改」。「待首回」「待关单」节点仍要自己点。</p>
+    <p class="hint">每张可关的单，关单原因和进展都是 AI 按这张单的内容判断、写的；不对就点「改」。流程节点（首回、关单）由桥接扩展 1.4 自动点，点不成会标红，那张单手动点。</p>
    </details>
   </div>`;
 }
