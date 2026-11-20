@@ -55,7 +55,16 @@ details summary{cursor:pointer;font-weight:600}
       <div id="fmap" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px"></div>
       <button id="reload">重新读取字段</button>
       <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
-      <b style="font-size:13px">API（可选）</b>
+      <b style="font-size:13px">AI 判断（可选）</b>
+      <p class="hint" style="margin:0">用 AI 自动判断优先级、产品型号、写简述。需要先装「录单助手桥接」Chrome 扩展（解决浏览器跨域）。</p>
+      <div class="row"><span class="chip" id="brState">桥接扩展：检测中</span><a href="https://github.com/ziheng-work/qingbo-helper/raw/main/qingbo-bridge.zip" target="_blank" rel="noopener" style="font-size:12px">下载扩展</a></div>
+      <label>AI 服务<select id="aiProv"><option value="https://ai-gateway.insta360.cn/v1">公司网关（默认）</option><option value="custom">自定义地址</option></select></label>
+      <label id="aiBaseWrap" style="display:none">AI 地址<input id="aiBase" placeholder="https://xxx/v1"></label>
+      <label>AI Key<input id="aiKey" type="password" placeholder="粘贴你自己的 Key（⌘V）" autocomplete="off"></label>
+      <div class="row"><select id="aiModel" style="flex:1;width:auto"><option value="">先点「获取模型」</option></select><button id="aiModels">获取模型</button></div>
+      <span class="chip" id="aiState">未连接</span>
+      <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">
+      <b style="font-size:13px">飞书后端 API（可选）</b>
       <p class="hint" style="margin:0">填了就能全自动：直接建单（含截图、型号）、首回、写进展、关单。公司的或自己搭的都行，只存在你自己浏览器里。</p>
       <label>API 地址<input id="apiBase" placeholder="https://你的服务地址/api/v1"></label>
       <label>API Key<input id="apiKey" type="password" placeholder="粘贴 API Key（⌘V）" autocomplete="off"></label>
@@ -127,6 +136,32 @@ async function call(method,path,body){
 }
 const normLink=u=>{try{const x=new URL(u);return (x.host+x.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return (u||'').trim().toLowerCase()}};
 let MODE='',SHOT='';
+const AI={base:'https://ai-gateway.insta360.cn/v1',key:'',model:''};
+try{Object.assign(AI,JSON.parse(localStorage.getItem('qbai')||'{}'))}catch(e){}
+const saveAi=()=>{try{localStorage.setItem('qbai',JSON.stringify(AI))}catch(e){}};
+let BR=false,BRID=0;const BRW={};
+window.addEventListener('message',e=>{const d=e.data;if(!d||e.source!==window)return;if(d.type==='QB_BRIDGE_READY'){BR=true;const el=document.getElementById('brState');if(el){el.textContent='桥接扩展：已安装';el.className='chip g'}}if(d.type==='QB_BRIDGE_RES'&&BRW[d.id]){BRW[d.id](d.res);delete BRW[d.id]}});
+async function bfetch(url,opt){
+  if(BR)return new Promise((ok,no)=>{const id=++BRID;BRW[id]=r=>ok(r);window.postMessage({type:'QB_BRIDGE_REQ',id,url,method:opt.method,headers:opt.headers,body:opt.body},location.origin);setTimeout(()=>{if(BRW[id]){delete BRW[id];no(new Error('桥接扩展没响应'))}},90000)});
+  try{const r=await fetch(url,opt);return{ok:r.ok,status:r.status,text:await r.text()}}catch(e){throw new Error('连不上 AI：没装桥接扩展，浏览器拦截了跨域请求')}
+}
+const aiReady=()=>AI.base&&AI.key&&AI.model;
+async function aiCall(path,body){
+  if(!AI.base||!AI.key)throw new Error('先在设置里填 AI Key');
+  const r=await bfetch(AI.base.replace(/\/$/,'')+path,{method:body?'POST':'GET',headers:{'Authorization':'Bearer '+AI.key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  let j={};try{j=JSON.parse(r.text)}catch(e){}
+  if(r.status===401)throw new Error('AI Key 无效');
+  if(!r.ok)throw new Error((j.error&&(j.error.message||j.error))||j.message||('AI 返回 '+r.status));
+  return j;
+}
+async function aiJudge(c){
+  const sys='你是 Insta360（影石）社媒客服的打标助手。根据帖子内容输出严格的 JSON，不要任何其他文字：{"pri":"P0|P1|P2|P3|无需回复","models":["型号"],"desc":"一句中文写清用户的具体问题或诉求","why":"一句理由"}。分级：P0=强烈情绪客诉（骂、投诉、维权、退款威胁）；P1=产品品质问题（坏了、故障、黑屏、进水、品控）；P2=一般技术问题（连接、设置、导出、App/固件报错）；P3=普通咨询（选购、用法、对比、维修咨询）；无需回复=纯测评/种草/晒图/广告/与影石无关或没有需要回答的问题。models 只能从这个列表里选，最多3个，按相关度排序，确定不了就选最接近的「…-其他」：'+MODELS.join('、');
+  const user='平台：'+(c.o.plat||'')+'\n用户：'+(c.o.user||'')+'\n标题/内容：'+(c.v.title||'')+'\n'+(c.desc||'');
+  const j=await aiCall('/chat/completions',{model:AI.model,temperature:0,messages:[{role:'system',content:sys},{role:'user',content:user}]});
+  const t=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+  const m=t.match(/\{[\s\S]*\}/);if(!m)throw new Error('AI 返回格式不对');
+  const o=JSON.parse(m[0]);o.models=(o.models||[]).filter(x=>MODELS.includes(x));return o;
+}
 
 let table=null,metas=[],F={},cur=null,userId='',busy=false,confirmShot=0;
 
@@ -169,7 +204,7 @@ function render(){
   if(cur&&cur.sm)return renderSM();
   const c=cur;if(!c)return;const L=c.L,v=c.v;
   const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复';
-  const qbPri=(v.pri||'').trim(),sp=qbPri?'':sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
+  const qbPri=(v.pri||'').trim(),sp=qbPri?'':(L.ai&&L.ai.pri)||sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
   const fl=fanBucket(c.fans)||c.o.fan||'';
   const taken=v.handler&&v.handler.trim();
   const po=progOpts();
@@ -185,7 +220,8 @@ function render(){
   </div>
 
   <div class="card"><h2><span class="n">2</span>打标</h2>
-   <h3>优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，关键词建议 '+sp:'')}</h3>
+   <div class="row" style="justify-content:space-between"><h3 style="margin:0">优先级${qbPri?' · 清博已分级「'+esc(qbPri)+'」（优先按这个）':(sp?' · 清博未分级，'+(L.ai?'AI':'关键词')+'建议 '+sp:'')}</h3>${aiReady()?`<button id="aiRun" style="min-height:28px">${L.aiBusy?'AI 判断中…':'AI 判断'}</button>`:''}</div>
+   ${L.ai?`<div class="ok" style="margin-top:6px">AI：${esc(L.ai.pri)} · ${esc((L.ai.models||[]).join('、')||'无型号')}<br>${esc(L.ai.why||'')}${L.ai.desc?`<br>简述：${esc(L.ai.desc)} <button id="aiDesc" style="min-height:24px;font-size:12px;padding:0 8px">用这个简述</button>`:''}${qbPri&&formPri(qbPri)!==formPri(L.ai.pri)?'<br>⚠️ 和清博分级不一致，按清博为准，有疑问问老师':''}</div>`:''}
    <div class="seg">${priOpts().map(p=>`<button data-pri="${esc(p)}" class="${L.pri===p?'on':''} ${sp&&formPri(p)===sp&&L.pri!==p?'sug':''}">${esc(p)}</button>`).join('')}</div>
    ${blocked?'<div class="alert">实习生规则：P0/P1 不录单、不回复，按负帖流程转出。</div>':''}
    ${noRec?'<div class="ok">无需回复：不用录单。</div>':''}
@@ -317,6 +353,8 @@ document.addEventListener('click',async e=>{
   else if(t.dataset.copy==='note')copy(noteText(cur));
   else if(t.dataset.copy==='model')copy(L.models.join('、'));
   else if(t.dataset.copy==='reason')copy(CLOSE[L.close].r);
+  else if(t.id==='aiRun'){if(L.aiBusy)return;L.aiBusy=1;render();try{const a=await aiJudge(cur);L.ai=a;if(a.models&&a.models.length&&!L.models.length)L.models=[...a.models];if(!(cur.v.pri||'').trim()&&!L.priTouched){const opt=priOpts().find(p=>formPri(p)===a.pri);if(opt)L.pri=opt}}catch(e){toast(e.message)}L.aiBusy=0;saveLocal();render()}
+  else if(t.id==='aiDesc'){cur.desc=L.ai.desc;render()}
   else if(t.id==='smNote'||t.id==='smClose'){const k=t.id==='smNote'?'note':'close';if(L.arm!==k){L.arm=k;renderSM();setTimeout(()=>{if(cur&&cur.L===L&&L.arm===k){L.arm='';renderSM()}},5000);return}L.arm='';if(busy)return;busy=true;try{await writeSM(k)}finally{busy=false}}
   else if(t.id==='apiCreate'){if(!L.models.length){toast('先选产品型号');return}if(!formPri(L.pri)){toast('先打优先级');return}if(!SHOT&&!confirmShot){confirmShot=1;toast('还没粘截图，再点一次就不带截图建单');return}confirmShot=0;t.disabled=true;
     try{const j=await call('POST','/tickets',{user:cur.o.user,type:cur.o.type,plat:cur.o.plat,time:cur.o.time,link:cur.o.link,desc:cur.desc,fan_level:fanBucket(cur.fans)||cur.o.fan||'',pri:formPri(L.pri),models:L.models,screenshot_base64:SHOT||undefined});L.ticket=j.ticket_no||'';saveLocal();L.w_note=true;await writeBack();toast('已建单 '+L.ticket+' 并回写清博')}catch(e){t.disabled=false;toast(e.message)}}
@@ -355,6 +393,17 @@ $('intern').onchange=e=>{CFG.intern=e.target.checked;saveCfg();render()};
 $('reload').onclick=async()=>{await loadFields();if(cur)loadRecord(cur.rid);toast('已重新读取')};
 document.body.insertAdjacentHTML('beforeend',`<datalist id="ml">${MODELS.map(m=>`<option value="${m}">`).join('')}</datalist><datalist id="accs"><option value="官方号"><option value="Support号"><option value="个人号"></datalist>`);
 
+const isCo=AI.base==='https://ai-gateway.insta360.cn/v1';$('aiProv').value=isCo?AI.base:'custom';$('aiBaseWrap').style.display=isCo?'none':'';$('aiBase').value=AI.base;$('aiKey').value=AI.key||'';
+const fillModels=list=>{$('aiModel').innerHTML=(list.length?list:[AI.model].filter(Boolean)).map(m=>`<option ${m===AI.model?'selected':''}>${esc(m)}</option>`).join('')||'<option value="">先点「获取模型」</option>'};
+fillModels(AI.model?[AI.model]:[]);
+const aiSt=(ok,t)=>{$('aiState').textContent=t;$('aiState').className='chip '+(ok?'g':(ok===false?'r':''))};
+$('aiProv').onchange=e=>{if(e.target.value==='custom'){$('aiBaseWrap').style.display=''}else{$('aiBaseWrap').style.display='none';AI.base=e.target.value;$('aiBase').value=AI.base;saveAi()}};
+$('aiBase').oninput=e=>{AI.base=e.target.value.trim();saveAi()};
+$('aiKey').oninput=e=>{AI.key=e.target.value.trim();saveAi();aiSt(null,'未连接')};
+$('aiModel').onchange=e=>{AI.model=e.target.value;saveAi();if(cur)render()};
+$('aiModels').onclick=async()=>{try{const j=await aiCall('/models');const list=(j.data||[]).map(x=>x.id).sort();if(!list.length)throw new Error('没拿到模型列表');if(!list.includes(AI.model))AI.model=list.find(m=>/mini|haiku|flash|lite/i.test(m))||list[0];saveAi();fillModels(list);aiSt(true,'已连接 · '+list.length+' 个模型');if(cur)render()}catch(e){aiSt(false,'连接失败');toast(e.message)}};
+window.postMessage({type:'QB_BRIDGE_PING'},location.origin);
+setTimeout(()=>{if(!BR){const el=$('brState');el.textContent='桥接扩展：未安装';el.className='chip r'}},1500);
 $('apiBase').value=API.base||'';$('apiKey').value=API.key||'';
 ['apiBase','apiKey'].forEach(id=>$(id).oninput=e=>{API[id==='apiBase'?'base':'key']=e.target.value.trim();API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip';saveApi()});
 $('apiTest').onclick=async()=>{try{const j=await call('GET','/health');API.ok=true;$('apiState').textContent='已连接'+(j.user?' · '+j.user:'');$('apiState').className='chip g';if(cur)render()}catch(e){API.ok=false;$('apiState').textContent='未连接';$('apiState').className='chip r';toast(e.message)}};
