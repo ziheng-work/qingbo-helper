@@ -126,7 +126,7 @@ const accRow=c=>{const p=platOf(c),L=c.L;return `<div class="seg" style="margin-
 const closeList=L=>`<div style="display:grid;gap:4px">${CLOSE.map((x,i)=>`<button data-close="${i}" class="${L.close===i?'on':''}" style="text-align:left;min-height:28px;font-size:13px;font-weight:500;${L.close===i?'background:var(--ink);color:var(--bg);border-color:var(--ink)':''}">${x.q}</button>`).join('')}</div>`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.15';
+const VER='1.16';
 const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
@@ -315,12 +315,20 @@ async function loadSM(rid){
 }
 const pendings=()=>Object.entries(LOCAL).filter(([k,L])=>k!=='_links'&&!k.startsWith('sm:')&&L&&typeof L==='object'&&!L.synced&&(L.ticket||(L.link&&L.wbDone))&&((L.acts&&L.acts.length)||L.close!=null||L.extra||L.acc));
 async function findTicket(no,link){
-  const conds=[];
-  if(no&&F.s_case)conds.push({fieldId:F.s_case.id,operator:'is',value:no});
-  else if(link&&F.s_link)conds.push({fieldId:F.s_link.id,operator:'contains',value:link.split('?')[0].replace(/\/$/,'')});
-  else return null;
-  const r=await table.getRecordIdListByPage({pageSize:5,filter:{conjunction:'and',conditions:conds}});
-  return (r&&r.recordIds&&r.recordIds[0])||null;
+  const f=no?F.s_case:F.s_link,val=no||(link||'').split('?')[0].replace(/\/$/,'');
+  if(!f||!val)return null;
+  for(const op of (no?['is','contains']:['contains','is'])){
+    try{const r=await table.getRecordIdListByPage({pageSize:5,filter:{conjunction:'and',conditions:[{fieldId:f.id,operator:op,value:val}]}});if(r&&r.recordIds&&r.recordIds.length)return r.recordIds[0]}catch(e){}
+  }
+  // 筛选不支持这个字段时，退回到在当前视图里逐条比对
+  try{
+    const view=await table.getActiveView();const ids=(await view.getVisibleRecordIdList()).filter(Boolean).slice(0,2000);
+    for(let k=0;k<ids.length;k+=30){
+      const part=ids.slice(k,k+30),vals=await Promise.all(part.map(id=>table.getCellString(f.id,id).catch(()=>'')));
+      const hit=vals.findIndex(v=>v&&(no?v.trim()===val:v.includes(val)));if(hit>=0)return part[hit];
+    }
+  }catch(e){}
+  return null;
 }
 let PEND={arm:0,msg:{},run:0};
 const reloadLocal=()=>{if(MODE!=='sm'||PEND.run)return;try{const n=JSON.parse(localStorage.getItem('qblocal')||'{}');for(const k in n)if(!k.startsWith('sm:'))LOCAL[k]=n[k]}catch(e){}renderPend()};
@@ -339,7 +347,7 @@ async function syncAll(){
   PEND.run=1;PEND.msg={};renderPend();
   for(const[k,L]of pendings()){
     try{
-      const rid=await findTicket(L.ticket,L.link);if(!rid)throw new Error('没找到这张单'+(L.ticket?'':'（表单提交后要等系统建好单；或在清博第 ③ 步填上社媒单号）'));
+      const rid=await findTicket(L.ticket,L.link);if(!rid)throw new Error('没找到这张单（先切到「社媒支持（当日）」视图；表单刚提交要等系统建好单）');
       const done=[];
       if(F.s_prog){const old=(await table.getCellString(F.s_prog.id,rid))||'';const note=noteText({L});if(!old.includes(note.slice(note.indexOf('：')))){await writeVal(F.s_prog,note+(old?'\n'+old:''),rid);done.push('进展')}else done.push('进展已有')}
       const cl=L.close!=null?CLOSE[L.close]:null;
@@ -428,7 +436,7 @@ async function writeBack(){
 }
 
 document.addEventListener('click',async e=>{
-  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no);return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
+  const t=e.target.closest('button');if(!t)return;if(t.id==='errX'){clearErr();return}if(t.id==='pendGo'){if(!PEND.arm){PEND.arm=1;renderPend();setTimeout(()=>{if(PEND.arm&&!PEND.run){PEND.arm=0;renderPend()}},5000);return}PEND.arm=0;await syncAll();return}if(t.id==='findGo'){const no=$('findNo').value.trim();if(!no){toast('先填单号');return}toast('查找中…');try{const rid=await findTicket(no,'');if(!rid){fail('没找到单号 '+no+'。切到包含这张单的视图（比如「社媒支持（当日）」）再试');return}clearErr();await loadSM(rid)}catch(e){fail('查找失败：'+(e.message||e))}return}if(['setDone','aiModels','apiTest','apiClear','reload'].includes(t.id))return;if(!cur)return;clearErr();const L=cur.L;
   if(t.dataset.pri){L.pri=L.pri===t.dataset.pri?'':t.dataset.pri;L.priTouched=1;saveLocal();render()}
   else if(t.dataset.add){L.models.push(t.dataset.add);saveLocal();render()}
   else if(t.dataset.rm!=null){L.models.splice(+t.dataset.rm,1);saveLocal();render()}
