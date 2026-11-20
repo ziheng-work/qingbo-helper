@@ -115,7 +115,8 @@ const CLOSE=[
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const VER='1.6';
+const VER='1.7';
+const wOn=(L,k,def)=>L['w_'+k]===undefined?def:L['w_'+k];
 const fail=m=>{$('errT').textContent='出错了：'+m;$('err').style.display=''};
 const clearErr=()=>{$('err').style.display='none'};
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)};
@@ -212,7 +213,7 @@ const progOpts=()=>F.prog&&F.prog.type===FieldType.SingleSelect?(F.prog.property
 function render(){
   if(cur&&cur.sm)return renderSM();
   const c=cur;if(!c)return;const L=c.L,v=c.v;
-  const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复';
+  const fp=formPri(L.pri),blocked=CFG.intern&&(fp==='P0'||fp==='P1'),noRec=fp==='无需回复',noLog=blocked||noRec;
   const qbPri=(v.pri||'').trim(),sp=qbPri?'':(L.ai&&L.ai.pri)||sugPri(c.desc),sm=sugModels(c.desc).filter(m=>!L.models.includes(m));
   const fl=fanBucket(c.fans)||c.o.fan||'';
   const taken=v.handler&&v.handler.trim();
@@ -255,13 +256,13 @@ function render(){
   </div>
 
   <div class="card wb"><h2><span class="n">4</span>回写清博（只写这一行）</h2>
-   ${F.reg?`<label><input type="checkbox" data-w="reg" ${L.w_reg!==false?'checked':''}> ${esc(F.reg.name)} → 是</label>`:''}
+   ${F.reg?`<label><input type="checkbox" data-w="reg" ${wOn(L,'reg',!noLog)?'checked':''}> ${esc(F.reg.name)} → 是</label>`:''}
    ${F.pri?(qbPri&&L.pri===qbPri?`<label style="color:var(--mute)">${esc(F.pri.name)}：清博已是「${esc(qbPri)}」，不改</label>`:`<label><input type="checkbox" data-w="pri" ${L.w_pri!==false?'checked':''}> ${esc(F.pri.name)} → ${esc(L.pri||'（先打标）')}${qbPri?'（会覆盖清博的「'+esc(qbPri)+'」）':''}</label>`):''}
-   ${F.date?`<label><input type="checkbox" data-w="date" ${L.w_date!==false?'checked':''}> ${esc(F.date.name)} → 今天</label>`:''}
-   ${F.handler?`<label><input type="checkbox" data-w="handler" ${L.w_handler!==false&&!taken?'checked':''}> ${esc(F.handler.name)} → 我${taken?'（已有人，默认不勾）':''}</label>`:''}
-   ${F.prog&&po.length?`<label><input type="checkbox" data-w="prog" ${L.w_prog!==false?'checked':''}> ${esc(F.prog.name)} → <select id="progSel" style="width:auto;padding:2px 6px">${po.map(o=>`<option ${o===L.progSel?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`:''}
+   ${F.date?`<label><input type="checkbox" data-w="date" ${wOn(L,'date',!noLog)?'checked':''}> ${esc(F.date.name)} → 今天</label>`:''}
+   ${F.handler?`<label><input type="checkbox" data-w="handler" ${wOn(L,'handler',!noLog&&!taken)?'checked':''}> ${esc(F.handler.name)} → 我${taken?'（已有人，默认不勾）':''}</label>`:''}
+   ${F.prog&&po.length?`<label><input type="checkbox" data-w="prog" ${wOn(L,'prog',!noLog)?'checked':''}> ${esc(F.prog.name)} → <select id="progSel" style="width:auto;padding:2px 6px">${po.map(o=>`<option ${o===L.progSel?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`:''}
    ${F.note?`<label><input type="checkbox" data-w="note" ${L.w_note===true?'checked':''}> ${esc(F.note.name)} → 追加「社媒单号 ${esc(L.ticket||'…')}」</label>`:''}
-   <p class="hint">只在你点按钮时写入，不会建选项、不改字段、不碰其他行。备注是追加不覆盖。</p>
+   ${noLog?'<p class="hint"><b>这条不录单</b>，默认只回写优先级；其他项需要的话自己勾。</p>':''}<p class="hint">只在你点按钮时写入，不会建选项、不改字段、不碰其他行。备注是追加不覆盖。</p>
    <button class="danger" id="wb" style="margin-top:6px;width:100%">${L.wbArm?'再点一次确认写入':'回写到这一行'}</button>
   </div>
 
@@ -350,12 +351,13 @@ async function writeBack(){
   const c=cur,L=c.L,T=FieldType,done=[],err=[];
   const d=new Date();d.setHours(0,0,0,0);
   const plan=[];
-  if(F.reg&&L.w_reg!==false)plan.push([F.reg,F.reg.type===T.Checkbox?true:'是']);
+  const fpw=formPri(L.pri),noLog=(CFG.intern&&(fpw==='P0'||fpw==='P1'))||fpw==='无需回复';
+  if(F.reg&&wOn(L,'reg',!noLog))plan.push([F.reg,F.reg.type===T.Checkbox?true:'是']);
   if(F.pri&&L.w_pri!==false&&L.pri&&L.pri!==(c.v.pri||'').trim())plan.push([F.pri,L.pri]);
-  if(F.date&&L.w_date!==false)plan.push([F.date,d.getTime()]);
+  if(F.date&&wOn(L,'date',!noLog))plan.push([F.date,d.getTime()]);
   const taken=c.v.handler&&c.v.handler.trim();
-  if(F.handler&&(L.w_handler===true||(L.w_handler!==false&&!taken))){if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}if(userId)plan.push([F.handler,userId]);else err.push('读不到当前用户，处理人没写')}
-  if(F.prog&&L.w_prog!==false&&L.progSel)plan.push([F.prog,L.progSel]);
+  if(F.handler&&wOn(L,'handler',!noLog&&!taken)){if(!userId)try{userId=await bitable.bridge.getUserId()}catch(e){}if(userId)plan.push([F.handler,userId]);else err.push('读不到当前用户，处理人没写')}
+  if(F.prog&&wOn(L,'prog',!noLog)&&L.progSel)plan.push([F.prog,L.progSel]);
   if(F.note&&L.w_note===true&&L.ticket)plan.push([F.note,((c.v.note?c.v.note+' ':'')+'社媒单号 '+L.ticket)]);
   for(const[f,val]of plan){try{await writeVal(f,val);done.push(f.name)}catch(e){err.push(e.message||String(e))}}
   toast(done.length?'已写：'+done.join('、'):'没有写入');
@@ -425,6 +427,7 @@ $('aiBase').oninput=e=>{AI.base=e.target.value.trim();saveAi()};
 $('aiKey').oninput=e=>{AI.key=e.target.value.trim();saveAi();aiSt(null,'未连接')};
 $('aiModel').onchange=e=>{AI.model=e.target.value;saveAi();if(cur)render()};
 $('aiModels').onclick=async()=>{try{const j=await aiCall('/models');const list=(j.data||[]).map(x=>x.id).sort();if(!list.length)throw new Error('没拿到模型列表');if(!list.includes(AI.model))AI.model=list.find(m=>/mini|haiku|flash|lite/i.test(m))||list[0];saveAi();fillModels(list);aiSt(true,'已连接 · '+list.length+' 个模型');if(cur)render()}catch(e){aiSt(false,'连接失败');fail(e.message)}};
+if(aiReady())aiSt(true,'已就绪 · '+AI.model);
 window.postMessage({type:'QB_BRIDGE_PING'},location.origin);
 setTimeout(()=>{if(!BR){const el=$('brState');el.textContent='桥接扩展：未安装';el.className='chip r'}},1500);
 $('apiBase').value=API.base||'';$('apiKey').value=API.key||'';
